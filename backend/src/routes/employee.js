@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const router = Router();
 
 // Get all employees for a business
-router.get('/:businessId', async (req, res) => {
+router.get('/business/:businessId', async (req, res) => {
   try {
     const employees = await prisma.employee.findMany({
       where: { businessId: req.params.businessId },
@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get single employee
-router.get('/id/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const employee = await prisma.employee.findUnique({
       where: { id: req.params.id },
@@ -88,24 +88,6 @@ router.delete('/:id', async (req, res) => {
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Not found' });
     }
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Regenerate invite code for existing employee
-router.post('/invite', async (req, res) => {
-  try {
-    const { businessId, phone } = req.body;
-    if (!businessId || !phone) {
-      return res.status(400).json({ error: 'businessId and phone required' });
-    }
-    const employee = await prisma.employee.findFirst({
-      where: { businessId, phone },
-    });
-    if (!employee) return res.status(404).json({ error: 'Employee not found' });
-    const inviteCode = generateInviteCode();
-    res.json({ employeeId: employee.id, inviteCode });
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
