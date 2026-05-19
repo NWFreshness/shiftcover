@@ -1,4 +1,5 @@
 import ScheduleGrid from '@/components/ScheduleGrid';
+import CoverageToggle from '@/components/CoverageToggle';
 
 // For demo, hardcode a business ID
 const DEMO_BUSINESS_ID = 'demo';
@@ -33,6 +34,8 @@ export default function ManagerDashboard() {
           <div className="text-sm text-gray-500">Open</div>
         </div>
       </div>
+
+      <CoverageToggle businessId={DEMO_BUSINESS_ID} />
 
       <ScheduleGrid businessId={DEMO_BUSINESS_ID} />
     </div>
