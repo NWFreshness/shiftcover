@@ -24,27 +24,28 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid ID format' });
     }
 
-    const shift = await prisma.shift.findUnique({ where: { id: shiftId } });
-    if (!shift) return res.status(404).json({ error: 'Shift not found' });
-    if (shift.status === 'filled') {
-      return res.status(409).json({ error: 'Shift already filled' });
-    }
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
-    const claim = await prisma.shiftClaim.create({
-      data: { shiftId, employeeId },
+    const result = await prisma.$transaction(async (tx) => {
+      const shift = await tx.shift.findUnique({ where: { id: shiftId } });
+      if (!shift) throw { status: 404, message: 'Shift not found' };
+      if (shift.status === 'filled') throw { status: 409, message: 'Shift already filled' };
+
+      const claim = await tx.shiftClaim.create({ data: { shiftId, employeeId } });
+      const updatedShift = await tx.shift.update({
+        where: { id: shiftId },
+        data: { assignedEmployeeId: employeeId, status: 'filled' },
+        include: { assignedEmployee: true },
+      });
+      return { claim, shift: updatedShift };
     });
 
-    const updatedShift = await prisma.shift.update({
-      where: { id: shiftId },
-      data: {
-        assignedEmployeeId: employeeId,
-        status: 'filled',
-      },
-      include: { assignedEmployee: true },
-    });
-
-    res.status(201).json({ claim, shift: updatedShift });
+    res.status(201).json({ claim: result.claim, shift: result.shift });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
