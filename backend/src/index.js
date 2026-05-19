@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import businessRoutes from './routes/business.js';
 import employeeRoutes from './routes/employee.js';
 import shiftRoutes from './routes/shift.js';
+import claimRoutes from './routes/claim.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/businesses', businessRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/shifts', shiftRoutes);
+app.use('/api/claims', claimRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
