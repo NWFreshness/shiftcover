@@ -1,7 +1,17 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import ManagerDashboard from './pages/ManagerDashboard';
+import EmployeeBoard from './pages/EmployeeBoard';
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <h1 className="text-2xl font-bold text-primary p-8">ShiftCover</h1>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/manager" element={<ManagerDashboard />} />
+        <Route path="/board" element={<EmployeeBoard />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
