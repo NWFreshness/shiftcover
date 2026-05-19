@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id           String   @id @default(uuid())
+  name         String
+  industryType String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  employees    Employee[]
+  shifts       Shift[]
+  coverageRules CoverageRule?
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  name         String
+  phone        String
+  email         String?
+  role         String
+  qualifications String   @default("[]")
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  shifts       Shift[]
+  shiftClaims  ShiftClaim[]
+  swapRequests SwapRequest[] @relation("SwapRequester")
+  swapTargets  SwapRequest[] @relation("SwapTarget")
+}
+
+model Shift {
+  id           String   @id @default(uuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  date         String
+  startTime    String
+  endTime      String
+  site         String?
+  role         String
+  assignedEmployeeId String?
+  assignedEmployee   Employee? @relation(fields: [assignedEmployeeId], references: [id])
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+  claims       ShiftClaim[]
+  swapRequests SwapRequest[]
+}
+
+model CoverageRule {
+  id                  String @id @default(uuid())
+  businessId          String @unique
+  business            Business @relation(fields: [businessId], references: [id])
+  noDoubleShiftHours  Int    @default(8)
+  minRestHours        Int    @default(10)
+  maxHoursPerWeek     Int    @default(40)
+  preferredWorkerMap  String @default("{}")
+}
+
+model ShiftClaim {
+  id          String   @id @default(uuid())
+  shiftId     String
+  shift       Shift @relation(fields: [shiftId], references: [id])
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  claimedAt   DateTime @default(now())
+  status      String   @default("confirmed")
+}
+
+model SwapRequest {
+  id              String   @id @default(uuid())
+  shiftId         String
+  shift           Shift @relation(fields: [shiftId], references: [id])
+  requesterId     String
+  requester       Employee @relation("SwapRequester", fields: [requesterId], references: [id])
+  targetEmployeeId String
+  targetEmployee  Employee @relation("SwapTarget", fields: [targetEmployeeId], references: [id])
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+}
