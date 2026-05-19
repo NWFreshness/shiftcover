@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { sendShiftNotification } from './sms.js';
 
 const prisma = new PrismaClient();
 
@@ -62,6 +63,17 @@ export async function applyCoverage(businessId, shiftId) {
 
     return { claim, shift: updatedShift, employee: candidate };
   });
+
+  // Send SMS notification to assigned employee
+  if (result && result.employee?.phone) {
+    sendShiftNotification(result.employee.phone, {
+      date: result.shift.date,
+      startTime: result.shift.startTime,
+      endTime: result.shift.endTime,
+      site: result.shift.site,
+      role: result.shift.role,
+    }).catch((err) => console.error('Failed to send SMS:', err));
+  }
 
   return result;
 }
