@@ -43,9 +43,15 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { name, industryType } = req.body;
+    if (!name && !industryType) {
+      return res.status(400).json({ error: 'At least one field (name or industryType) is required' });
+    }
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (industryType) updateData.industryType = industryType;
     const business = await prisma.business.update({
       where: { id: req.params.id },
-      data: { name, industryType },
+      data: updateData,
     });
     res.json({ business });
   } catch (error) {
