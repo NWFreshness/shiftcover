@@ -3,6 +3,7 @@
 const TOKEN_KEY = 'shiftcover_token';
 const MANAGER_KEY = 'shiftcover_is_manager';
 const EMPLOYEE_KEY = 'shiftcover_employee_id';
+export const MANAGER_ONBOARDING_SKIP_KEY = 'shiftcover_manager_onboarding_skipped';
 
 export interface Session {
   token: string;
@@ -28,6 +29,7 @@ export function saveSession(token: string, isManager: boolean, employeeId?: stri
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(MANAGER_KEY, isManager ? '1' : '0');
   if (employeeId) localStorage.setItem(EMPLOYEE_KEY, employeeId);
+  localStorage.removeItem(MANAGER_ONBOARDING_SKIP_KEY);
 }
 
 export function getToken(): string | null {
@@ -49,6 +51,7 @@ export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(MANAGER_KEY);
   localStorage.removeItem(EMPLOYEE_KEY);
+  localStorage.removeItem(MANAGER_ONBOARDING_SKIP_KEY);
 }
 
 export function normalizePhone(value: string): string {

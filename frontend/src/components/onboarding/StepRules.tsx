@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import CoverageRulesForm from '@/components/CoverageRulesForm';
-import { apiFetch } from '@/lib/auth';
+import { apiFetch, MANAGER_ONBOARDING_SKIP_KEY } from '@/lib/auth';
 
 interface StepProps {
   onBack: () => void;
@@ -26,6 +26,7 @@ export default function StepRules({ onBack, refreshStatus }: StepProps) {
         return;
       }
       await refreshStatus();
+      localStorage.removeItem(MANAGER_ONBOARDING_SKIP_KEY);
       router.replace('/manager');
     } catch {
       setError('Network error');

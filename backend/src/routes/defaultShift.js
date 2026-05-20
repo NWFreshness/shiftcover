@@ -11,6 +11,10 @@ function sanitizeError(error) {
   return 'Internal server error';
 }
 
+export function serializeDefaultShift(shift) {
+  return { ...shift, daysOfWeek: JSON.parse(shift.daysOfWeek) };
+}
+
 // GET /api/default-shifts — list all for the business (auth required)
 router.get('/', async (req, res) => {
   try {
@@ -18,7 +22,7 @@ router.get('/', async (req, res) => {
       where: { businessId: req.auth.businessId },
       orderBy: { createdAt: 'asc' },
     });
-    res.json({ defaultShifts: shifts.map(s => ({ ...s, daysOfWeek: JSON.parse(s.daysOfWeek) })) });
+    res.json({ defaultShifts: shifts.map(serializeDefaultShift) });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
@@ -39,7 +43,7 @@ router.post('/', requireManager, validate(defaultShiftCreateSchema), async (req,
         daysOfWeek: JSON.stringify(daysOfWeek || []),
       },
     });
-    res.status(201).json({ defaultShift: { ...shift, daysOfWeek: JSON.parse(shift.daysOfWeek) } });
+    res.status(201).json({ defaultShift: serializeDefaultShift(shift) });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
@@ -64,7 +68,7 @@ router.put('/:id', requireManager, validate(defaultShiftUpdateSchema), async (re
         ...(daysOfWeek !== undefined && { daysOfWeek: JSON.stringify(daysOfWeek) }),
       },
     });
-    res.json({ defaultShift: { ...updated, daysOfWeek: JSON.parse(updated.daysOfWeek) } });
+    res.json({ defaultShift: serializeDefaultShift(updated) });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }

@@ -5,6 +5,9 @@ import {
   loginSchema,
   shiftCreateSchema,
   employeeCreateSchema,
+  employeeSelfUpdateSchema,
+  defaultShiftCreateSchema,
+  defaultShiftUpdateSchema,
   claimSchema,
 } from '../src/schemas.js';
 
@@ -83,6 +86,47 @@ test('employeeCreateSchema: requires E.164 phone, accepts optional qualification
     }).success,
     true,
   );
+});
+
+test('employeeSelfUpdateSchema: supports employee profile confirmation', () => {
+  assert.equal(employeeSelfUpdateSchema.safeParse({}).success, true);
+  assert.equal(employeeSelfUpdateSchema.safeParse({ name: 'A', phone: '123' }).success, false);
+  assert.equal(
+    employeeSelfUpdateSchema.safeParse({
+      name: 'A',
+      phone: '+15055551234',
+      email: 'a@example.com',
+    }).success,
+    true,
+  );
+});
+
+test('defaultShiftCreateSchema: validates template times and weekdays', () => {
+  assert.equal(
+    defaultShiftCreateSchema.safeParse({
+      label: 'Morning',
+      role: 'Barista',
+      startTime: '08:00',
+      endTime: '14:00',
+      daysOfWeek: [1, 2, 3],
+    }).success,
+    true,
+  );
+  assert.equal(
+    defaultShiftCreateSchema.safeParse({
+      label: 'Broken',
+      role: 'Barista',
+      startTime: '8:00',
+      endTime: '14:00',
+      daysOfWeek: [7],
+    }).success,
+    false,
+  );
+});
+
+test('defaultShiftUpdateSchema: allows partial template updates', () => {
+  assert.equal(defaultShiftUpdateSchema.safeParse({ startTime: '09:30' }).success, true);
+  assert.equal(defaultShiftUpdateSchema.safeParse({ daysOfWeek: [-1] }).success, false);
 });
 
 test('claimSchema: requires a uuid shiftId', () => {

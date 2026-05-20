@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/components/TopBar';
@@ -10,7 +9,7 @@ import StepRules from '@/components/onboarding/StepRules';
 import StepTeam from '@/components/onboarding/StepTeam';
 import WizardShell from '@/components/onboarding/WizardShell';
 import type { OnboardingStatus, WizardStepId } from '@/components/onboarding/types';
-import { apiFetch, getToken, isManager } from '@/lib/auth';
+import { apiFetch, getToken, isManager, MANAGER_ONBOARDING_SKIP_KEY } from '@/lib/auth';
 
 const orderedSteps: WizardStepId[] = ['business', 'shifts', 'team', 'rules', 'done'];
 
@@ -52,9 +51,17 @@ export default function ManagerOnboardingPage() {
     setStep(orderedSteps[Math.max(index - 1, 0)]);
   };
 
+  const skipToDashboard = () => {
+    localStorage.setItem(MANAGER_ONBOARDING_SKIP_KEY, '1');
+    router.replace('/manager');
+  };
+
   const finishWithoutRules = async () => {
     const res = await apiFetch('/api/onboarding/complete', { method: 'POST' });
-    if (res.ok) router.replace('/manager');
+    if (res.ok) {
+      localStorage.removeItem(MANAGER_ONBOARDING_SKIP_KEY);
+      router.replace('/manager');
+    }
   };
 
   let content = null;
@@ -89,7 +96,7 @@ export default function ManagerOnboardingPage() {
   return (
     <>
       <TopBar>
-        <Link href="/manager" className="btn btn-ghost btn-sm">Skip</Link>
+        <button type="button" onClick={skipToDashboard} className="btn btn-ghost btn-sm">Skip</button>
       </TopBar>
       <WizardShell step={step} status={status} onStepChange={setStep}>
         {content}

@@ -119,11 +119,9 @@ Run the relevant checks before claiming work is done.
 
 ## Known doc drift (verify against code)
 
-- `README.md` lists routes like `GET /api/employees/:businessId` and
-  `GET /api/shifts/:businessId`. The live API scopes by token instead
-  (`GET /api/shifts`, `GET /api/employees`, plus `/api/coverage/*`,
-  `/api/swaps`, `/api/availability/*`). Trust `backend/src/routes/` and the
-  `apiFetch` calls in `frontend/src`.
+- The README API list is intended to track live routes, but the code remains the
+  source of truth. Trust `backend/src/routes/` and the `apiFetch` calls in
+  `frontend/src` when they disagree.
 - README says the backend entry is `index.js`; it's actually `src/index.js`.
 
 ## Don'ts

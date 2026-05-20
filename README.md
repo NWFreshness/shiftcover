@@ -8,6 +8,8 @@ A lightweight B2B SaaS shift coverage application for small local businesses (5�
 - **Open Shift Board** — Mobile-friendly view for employees to browse and claim open shifts
 - **Auto Coverage** — One-toggle automation that fills open shifts based on employee availability and coverage history
 - **SMS Notifications** — Twilio integration sends text messages when shifts open up or are auto-assigned
+- **Manager Onboarding** — Guided setup for business profile, shift templates, team invites, and coverage rules
+- **Employee Welcome Flow** — First-login profile confirmation and optional 7-day availability setup
 - **PWA** — Works on mobile web — add to home screen for app-like experience
 
 ## Default Invite Codes (Dev)
@@ -80,23 +82,39 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## API Endpoints
 
+Routes are scoped to the authenticated business via the JWT. Frontend code calls these through relative `/api/*` paths.
+
+### Auth
+- `POST /api/auth/register` — Create a business and manager account
+- `POST /api/auth/login` — Sign in with a 6-digit invite code
+
 ### Businesses
-- `GET /api/businesses` — List businesses
-- `POST /api/businesses` — Create business
-- `GET /api/businesses/:id` — Get business
-- `PUT /api/businesses/:id` — Update business
-- `DELETE /api/businesses/:id` — Delete business
+- `GET /api/businesses` — Get current business profile and SMS capability
+- `PUT /api/businesses/:id` — Update the current business profile
+
+### Onboarding
+- `GET /api/onboarding/status` — Get manager onboarding step status
+- `POST /api/onboarding/complete` — Mark manager onboarding complete
+
+### Default Shift Templates
+- `GET /api/default-shifts` — List default shift templates
+- `POST /api/default-shifts` — Create a template
+- `PUT /api/default-shifts/:id` — Update a template
+- `DELETE /api/default-shifts/:id` — Delete a template
 
 ### Employees
-- `GET /api/employees/:businessId` — List employees
-- `POST /api/employees` — Create employee
-- `GET /api/employees/:id` — Get employee
-- `PUT /api/employees/:id` — Update employee
-- `DELETE /api/employees/:id` — Delete employee
-- `POST /api/employees/invite` — Generate invite code
+- `GET /api/employees` — List employees for the current business
+- `POST /api/employees` — Create an employee and invite code
+- `GET /api/employees/me` — Get the authenticated employee profile
+- `PUT /api/employees/me` — Update the authenticated employee profile
+- `POST /api/employees/me/onboarded` — Mark employee first-run onboarding complete
+- `GET /api/employees/:id` — Get one employee in the current business
+- `PUT /api/employees/:id` — Update one employee
+- `DELETE /api/employees/:id` — Delete one employee
+- `POST /api/employees/:id/invite` — Send or show an employee invite code
 
 ### Shifts
-- `GET /api/shifts/:businessId` — List shifts
+- `GET /api/shifts` — List shifts for the current business
 - `POST /api/shifts` — Create shift
 - `GET /api/shifts/:id` — Get shift
 - `PUT /api/shifts/:id` — Update shift
@@ -105,9 +123,24 @@ Open [http://localhost:3000](http://localhost:3000)
 ### Claims
 - `POST /api/claims` — Employee claims an open shift
 
+### Availability
+- `GET /api/availability/mine` — List authenticated employee availability
+- `PUT /api/availability` — Upsert authenticated employee availability for a date
+- `GET /api/availability/employee/:id` — Manager view of employee availability
+
+### Swaps
+- `GET /api/swaps` — List relevant swap requests
+- `POST /api/swaps` — Create swap request
+- `POST /api/swaps/:id/approve` — Approve swap request
+- `POST /api/swaps/:id/reject` — Reject swap request
+
 ### Coverage
+- `GET /api/coverage/stats` — Coverage totals for dashboard
+- `GET /api/coverage/rules` — Get coverage rules
+- `PUT /api/coverage/rules` — Update coverage rules
 - `POST /api/coverage/auto/:shiftId` — Auto-fill one shift
 - `POST /api/coverage/fill-all` — Auto-fill all open shifts
+- `POST /api/coverage/check-uncovered` — Alert managers about long-uncovered shifts
 
 ## License
 

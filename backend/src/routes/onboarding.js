@@ -9,6 +9,15 @@ function sanitizeError(error) {
   return 'Internal server error';
 }
 
+export function buildOnboardingSteps(business) {
+  return {
+    businessProfile: !!(business.name && business.industryType),
+    defaultShifts: business.defaultShifts.length > 0,
+    employees: business.employees.length > 0,
+    coverageRules: business.coverageRules.length > 0,
+  };
+}
+
 // GET /api/onboarding/status — returns completion status + step details
 router.get('/status', async (req, res) => {
   try {
@@ -25,12 +34,7 @@ router.get('/status', async (req, res) => {
       return res.status(404).json({ error: 'Business not found' });
     }
 
-    const steps = {
-      businessProfile: !!(business.name && business.industryType),
-      defaultShifts: business.defaultShifts.length > 0,
-      employees: business.employees.length > 0,
-      coverageRules: business.coverageRules.length > 0,
-    };
+    const steps = buildOnboardingSteps(business);
 
     res.json({
       completedAt: business.onboardingCompletedAt,

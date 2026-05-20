@@ -7,7 +7,7 @@ import ScheduleGrid from '@/components/ScheduleGrid';
 import CoverageToggle from '@/components/CoverageToggle';
 import ShiftModal from '@/components/ShiftModal';
 import TopBar from '@/components/TopBar';
-import { apiFetch, getToken, isManager } from '@/lib/auth';
+import { apiFetch, getToken, isManager, MANAGER_ONBOARDING_SKIP_KEY } from '@/lib/auth';
 
 interface ShiftFormData {
   date: string;
@@ -55,7 +55,21 @@ export default function ManagerDashboard() {
       router.replace('/board');
       return;
     }
-    loadData();
+    const load = async () => {
+      const skippedOnboarding = localStorage.getItem(MANAGER_ONBOARDING_SKIP_KEY) === '1';
+      if (!skippedOnboarding) {
+        const onboardingRes = await apiFetch('/api/onboarding/status');
+        if (onboardingRes.ok) {
+          const onboarding = await onboardingRes.json();
+          if (!onboarding.completedAt) {
+            router.replace('/manager/onboarding');
+            return;
+          }
+        }
+      }
+      await loadData();
+    };
+    load();
   }, [router, loadData]);
 
   const handleCheckUncovered = async () => {
