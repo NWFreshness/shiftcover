@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
+import { requireManager } from '../middleware/auth.js';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,14 +11,18 @@ function sanitizeError(error) {
   return 'Internal server error';
 }
 
-// Get all shifts for a business
-router.get('/:businessId', async (req, res) => {
+async function ownedShift(id, businessId) {
+  if (!uuidRegex.test(id)) return null;
+  const shift = await prisma.shift.findUnique({ where: { id } });
+  if (!shift || shift.businessId !== businessId) return null;
+  return shift;
+}
+
+// Get all shifts for the authenticated business
+router.get('/', async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.businessId)) {
-      return res.status(400).json({ error: 'Invalid business ID format' });
-    }
     const shifts = await prisma.shift.findMany({
-      where: { businessId: req.params.businessId },
+      where: { businessId: req.auth.businessId },
       include: { assignedEmployee: true },
       orderBy: { date: 'asc' },
     });
@@ -29,18 +33,15 @@ router.get('/:businessId', async (req, res) => {
 });
 
 // Create a shift
-router.post('/', async (req, res) => {
+router.post('/', requireManager, async (req, res) => {
   try {
-    const { businessId, date, startTime, endTime, site, role, assignedEmployeeId } = req.body;
-    if (!businessId || !date || !startTime || !endTime || !role) {
-      return res.status(400).json({ error: 'businessId, date, startTime, endTime, role required' });
-    }
-    if (!uuidRegex.test(businessId)) {
-      return res.status(400).json({ error: 'Invalid business ID format' });
+    const { date, startTime, endTime, site, role, assignedEmployeeId } = req.body;
+    if (!date || !startTime || !endTime || !role) {
+      return res.status(400).json({ error: 'date, startTime, endTime, role required' });
     }
     const shift = await prisma.shift.create({
       data: {
-        businessId,
+        businessId: req.auth.businessId,
         date,
         startTime,
         endTime,
@@ -59,25 +60,23 @@ router.post('/', async (req, res) => {
 // Get single shift
 router.get('/id/:id', async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid shift ID format' });
-    }
-    const shift = await prisma.shift.findUnique({
+    const shift = await ownedShift(req.params.id, req.auth.businessId);
+    if (!shift) return res.status(404).json({ error: 'Not found' });
+    const full = await prisma.shift.findUnique({
       where: { id: req.params.id },
       include: { assignedEmployee: true },
     });
-    if (!shift) return res.status(404).json({ error: 'Not found' });
-    res.json({ shift });
+    res.json({ shift: full });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 // Assign employee to shift
-router.put('/:id/assign', async (req, res) => {
+router.put('/:id/assign', requireManager, async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid shift ID format' });
+    if (!(await ownedShift(req.params.id, req.auth.businessId))) {
+      return res.status(404).json({ error: 'Not found' });
     }
     const { employeeId } = req.body;
     const shift = await prisma.shift.update({
@@ -90,18 +89,15 @@ router.put('/:id/assign', async (req, res) => {
     });
     res.json({ shift });
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Not found' });
-    }
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 // Update shift
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireManager, async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid shift ID format' });
+    if (!(await ownedShift(req.params.id, req.auth.businessId))) {
+      return res.status(404).json({ error: 'Not found' });
     }
     const { date, startTime, endTime, site, role, assignedEmployeeId, status } = req.body;
     const updateData = {};
@@ -123,25 +119,19 @@ router.put('/:id', async (req, res) => {
     });
     res.json({ shift });
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Not found' });
-    }
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
 // Delete shift
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireManager, async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.id)) {
-      return res.status(400).json({ error: 'Invalid shift ID format' });
+    if (!(await ownedShift(req.params.id, req.auth.businessId))) {
+      return res.status(404).json({ error: 'Not found' });
     }
     await prisma.shift.delete({ where: { id: req.params.id } });
     res.status(204).send();
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Not found' });
-    }
     res.status(500).json({ error: sanitizeError(error) });
   }
 });

@@ -1,23 +1,35 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/auth.js';
 import businessRoutes from './routes/business.js';
 import employeeRoutes from './routes/employee.js';
 import shiftRoutes from './routes/shift.js';
 import claimRoutes from './routes/claim.js';
 import coverageRoutes from './routes/coverage.js';
+import { requireAuth } from './middleware/auth.js';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-app.use('/api/businesses', businessRoutes);
-app.use('/api/employees', employeeRoutes);
-app.use('/api/shifts', shiftRoutes);
-app.use('/api/claims', claimRoutes);
-app.use('/api/coverage', coverageRoutes);
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+
+app.use('/api/auth', authLimiter, authRoutes);
+
+app.use('/api/businesses', apiLimiter, requireAuth, businessRoutes);
+app.use('/api/employees', apiLimiter, requireAuth, employeeRoutes);
+app.use('/api/shifts', apiLimiter, requireAuth, shiftRoutes);
+app.use('/api/claims', apiLimiter, requireAuth, claimRoutes);
+app.use('/api/coverage', apiLimiter, requireAuth, coverageRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { applyCoverage, fillAllOpenShifts, getCoverageStats, findCoverage } from '../services/coverage.js';
+import { requireManager } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -8,17 +9,11 @@ function sanitizeError(res, error) {
   res.status(500).json({ error: 'Internal server error' });
 }
 
-router.post('/auto/:shiftId', async (req, res) => {
+router.post('/auto/:shiftId', requireManager, async (req, res) => {
   try {
-    const { shiftId } = req.params;
-    const { businessId } = req.body;
-    if (!businessId) {
-      return res.status(400).json({ error: 'businessId required' });
-    }
-
-    const result = await applyCoverage(businessId, shiftId);
+    const result = await applyCoverage(req.auth.businessId, req.params.shiftId);
     if (!result) {
-      return res.json({ message: 'No candidate found', shiftId });
+      return res.json({ message: 'No candidate found', shiftId: req.params.shiftId });
     }
     res.json({ message: 'Shift filled automatically', ...result });
   } catch (error) {
@@ -32,32 +27,18 @@ router.post('/auto/:shiftId', async (req, res) => {
   }
 });
 
-router.post('/fill-all', async (req, res) => {
+router.post('/fill-all', requireManager, async (req, res) => {
   try {
-    const { businessId } = req.body;
-    if (!businessId) {
-      return res.status(400).json({ error: 'businessId required' });
-    }
-
-    const results = await fillAllOpenShifts(businessId);
-    res.json({
-      message: `Filled ${results.length} shifts`,
-      results,
-    });
+    const results = await fillAllOpenShifts(req.auth.businessId);
+    res.json({ message: `Filled ${results.length} shifts`, results });
   } catch (error) {
     sanitizeError(res, error);
   }
 });
 
-router.get('/preview/:shiftId', async (req, res) => {
+router.get('/preview/:shiftId', requireManager, async (req, res) => {
   try {
-    const { shiftId } = req.params;
-    const { businessId } = req.query;
-    if (!businessId) {
-      return res.status(400).json({ error: 'businessId required' });
-    }
-
-    const candidate = await findCoverage(businessId, shiftId);
+    const candidate = await findCoverage(req.auth.businessId, req.params.shiftId);
     if (!candidate) {
       return res.json({ candidate: null, message: 'No eligible employee found' });
     }
@@ -70,9 +51,9 @@ router.get('/preview/:shiftId', async (req, res) => {
   }
 });
 
-router.get('/stats/:businessId', async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    const stats = await getCoverageStats(req.params.businessId);
+    const stats = await getCoverageStats(req.auth.businessId);
     res.json(stats);
   } catch (error) {
     sanitizeError(res, error);

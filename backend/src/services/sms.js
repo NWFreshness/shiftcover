@@ -4,7 +4,8 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
-const client = accountSid && authToken ? Twilio(accountSid, authToken) : null;
+const client =
+  accountSid?.startsWith('AC') && authToken ? Twilio(accountSid, authToken) : null;
 
 function sanitizeError(error) {
   console.error('SMS error:', error);

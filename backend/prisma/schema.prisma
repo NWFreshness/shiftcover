@@ -28,6 +28,8 @@ model Employee {
   role         String
   qualifications String   @default("[]")
   status       String   @default("active")
+  inviteCode   String?  @unique
+  isManager    Boolean  @default(false)
   createdAt    DateTime @default(now())
   shifts       Shift[]
   shiftClaims  ShiftClaim[]

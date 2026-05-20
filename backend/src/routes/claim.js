@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,25 +10,21 @@ function sanitizeError(error) {
   return 'Internal server error';
 }
 
-// Employee claims an open shift
+// Authenticated employee claims an open shift
 router.post('/', async (req, res) => {
   try {
-    const { shiftId, employeeId } = req.body;
-    
-    if (!shiftId || !employeeId) {
-      return res.status(400).json({ error: 'shiftId and employeeId required' });
-    }
-    
-    if (!uuidRegex.test(shiftId) || !uuidRegex.test(employeeId)) {
-      return res.status(400).json({ error: 'Invalid ID format' });
-    }
+    const { shiftId } = req.body;
+    const employeeId = req.auth.employeeId;
 
-    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
-    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    if (!shiftId || !uuidRegex.test(shiftId)) {
+      return res.status(400).json({ error: 'Valid shiftId required' });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const shift = await tx.shift.findUnique({ where: { id: shiftId } });
-      if (!shift) throw { status: 404, message: 'Shift not found' };
+      if (!shift || shift.businessId !== req.auth.businessId) {
+        throw { status: 404, message: 'Shift not found' };
+      }
       if (shift.status === 'filled') throw { status: 409, message: 'Shift already filled' };
 
       const claim = await tx.shiftClaim.create({ data: { shiftId, employeeId } });
@@ -50,11 +45,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get claims for a shift
+// Get claims for a shift (within the authenticated business)
 router.get('/shift/:shiftId', async (req, res) => {
   try {
     if (!uuidRegex.test(req.params.shiftId)) {
       return res.status(400).json({ error: 'Invalid shift ID format' });
+    }
+    const shift = await prisma.shift.findUnique({ where: { id: req.params.shiftId } });
+    if (!shift || shift.businessId !== req.auth.businessId) {
+      return res.status(404).json({ error: 'Not found' });
     }
     const claims = await prisma.shiftClaim.findMany({
       where: { shiftId: req.params.shiftId },
@@ -66,14 +65,11 @@ router.get('/shift/:shiftId', async (req, res) => {
   }
 });
 
-// Get claims for an employee
-router.get('/employee/:employeeId', async (req, res) => {
+// Get the authenticated employee's own claims
+router.get('/mine', async (req, res) => {
   try {
-    if (!uuidRegex.test(req.params.employeeId)) {
-      return res.status(400).json({ error: 'Invalid employee ID format' });
-    }
     const claims = await prisma.shiftClaim.findMany({
-      where: { employeeId: req.params.employeeId },
+      where: { employeeId: req.auth.employeeId },
       include: { shift: true },
     });
     res.json({ claims });
