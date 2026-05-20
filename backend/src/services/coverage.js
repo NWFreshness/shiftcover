@@ -3,94 +3,95 @@ import { sendShiftNotification } from './sms.js';
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
+const HOUR_MS = 60 * 60 * 1000;
+
+// Build a Date from a "YYYY-MM-DD" date and "HH:MM" time, in local time.
+function dateTimeToDate(dateStr, timeStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [h, m] = timeStr.split(':').map(Number);
+  return new Date(year, month - 1, day, h, m);
 }
 
-// Parse time "HH:MM" to minutes since midnight
-function timeToMinutes(time) {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
+// Return a shift's {start, end} as Dates. Overnight shifts (end <= start)
+// roll the end to the following day so durations and gaps stay correct.
+function shiftInterval(shift) {
+  const start = dateTimeToDate(shift.date, shift.startTime);
+  let end = dateTimeToDate(shift.date, shift.endTime);
+  if (end <= start) end = new Date(end.getTime() + 24 * HOUR_MS);
+  return { start, end };
 }
 
-// Get shift end time as a Date object for calculations
-function shiftEndAsDate(shiftDate, shiftEndTime) {
-  const [year, month, day] = shiftDate.split('-').map(Number);
-  const [endH, endM] = shiftEndTime.split(':').map(Number);
-  return new Date(year, month - 1, day, endH, endM);
+function shiftHours(shift) {
+  const { start, end } = shiftInterval(shift);
+  return (end - start) / HOUR_MS;
 }
 
-// Check if two shifts overlap or violate rest period
-function violatesRestPeriod(shift1End, shift1Date, shift1EndTime, shift2Date, shift2StartTime, minRestHours) {
-  const shift2Start = shiftEndAsDate(shift2Date, shift2StartTime);
-  const shift1EndDate = shiftEndAsDate(shift1Date, shift1EndTime);
-
-  // Convert rest hours to milliseconds
-  const restMs = minRestHours * 60 * 60 * 1000;
-
-  // If shift1 ends after shift2 starts (with rest period buffer), they violate the rule
-  // shift1 end + minRestHours > shift2 start
-  const restPeriodEnd = new Date(shift1EndDate.getTime() + restMs);
-  return restPeriodEnd > shift2Start;
+// Gap in ms between two intervals; negative (-1) when they overlap.
+function gapBetween(a, b) {
+  if (a.end <= b.start) return b.start - a.end;
+  if (b.end <= a.start) return a.start - b.end;
+  return -1;
 }
 
-async function getEmployeeShiftsInRange(employeeId, businessId, startDate, endDate) {
-  return prisma.shift.findMany({
-    where: {
-      employeeId: employeeId,
-      businessId,
-      date: {
-        gte: startDate,
-        lte: endDate,
-      },
-    },
-  });
+// "YYYY-MM-DD" for a local Date.
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-function checkViolation(employee, targetShift, businessShifts, minRestHours) {
-  const targetEnd = shiftEndAsDate(targetShift.date, targetShift.endTime);
-  const targetStart = shiftEndAsDate(targetShift.date, targetShift.startTime);
-  const restMs = minRestHours * 60 * 60 * 1000;
+function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return toDateStr(new Date(y, m - 1, d + n));
+}
 
-  for (const shift of businessShifts) {
+// Start of the ISO week (Monday) for a date, parsed in local time.
+function getWeekStart(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = date.getDay(); // 0 = Sunday
+  const diff = dow === 0 ? -6 : 1 - dow;
+  date.setDate(date.getDate() + diff);
+  return toDateStr(date);
+}
+
+// True if assigning targetShift leaves less than minRestHours between it and
+// any of the employee's existing shifts (overlap counts as a violation).
+function restViolation(targetShift, employeeShifts, minRestHours) {
+  const target = shiftInterval(targetShift);
+  const restMs = minRestHours * HOUR_MS;
+  for (const shift of employeeShifts) {
     if (shift.id === targetShift.id) continue;
-    if (shift.assignedEmployeeId !== employee.id) continue;
-
-    const shiftEnd = shiftEndAsDate(shift.date, shift.endTime);
-    const shiftStart = shiftEndAsDate(shift.date, shift.startTime);
-
-    // Check rest period violations in both directions
-    // Does target shift start too soon after the employee's existing shift ended?
-    const targetStartWithRest = new Date(shiftEnd.getTime() + restMs);
-    if (targetStartWithRest > targetStart) {
-      return `Rest period violation: only ${Math.round((targetStart - shiftEnd) / (60 * 60 * 1000) * 10) / 10}h between shifts (minimum ${minRestHours}h required)`;
-    }
-
-    // Does target shift end too soon before the employee's existing shift starts?
-    const shiftStartWithRest = new Date(targetEnd.getTime() + restMs);
-    if (shiftStartWithRest > shiftStart) {
-      return `Rest period violation: only ${Math.round((shiftStart - targetEnd) / (60 * 60 * 1000) * 10) / 10}h between shifts (minimum ${minRestHours}h required)`;
-    }
+    if (gapBetween(target, shiftInterval(shift)) < restMs) return true;
   }
-
-  return null; // No violation
+  return false;
 }
 
-function calculateWeeklyHours(shifts, weekStartDate) {
-  const weekEndDate = new Date(weekStartDate);
-  weekEndDate.setDate(weekEndDate.getDate() + 7);
-  weekEndDate.setDate(weekEndDate.getDate() - 1); // End on the 7th day
-
-  let totalMinutes = 0;
-  for (const shift of shifts) {
-    if (shift.date >= weekStartDate && shift.date <= weekEndDate.toISOString().split('T')[0]) {
-      const startMins = timeToMinutes(shift.startTime);
-      const endMins = timeToMinutes(shift.endTime);
-      totalMinutes += (endMins - startMins + (endMins < startMins ? 24 * 60 : 0));
-    }
+// True if the employee already has a shift starting within noDoubleShiftHours
+// of the target shift (the PRD's "no double shift" rule).
+function doubleShiftViolation(targetShift, employeeShifts, noDoubleShiftHours) {
+  if (!noDoubleShiftHours) return false;
+  const target = shiftInterval(targetShift);
+  const limitMs = noDoubleShiftHours * HOUR_MS;
+  for (const shift of employeeShifts) {
+    if (shift.id === targetShift.id) continue;
+    if (Math.abs(shiftInterval(shift).start - target.start) < limitMs) return true;
   }
-  return totalMinutes / 60;
+  return false;
+}
+
+// Employee IDs preferred for a given site, from the rules' JSON map.
+function preferredForSite(preferredWorkerMap, site) {
+  if (!site) return [];
+  try {
+    const map = JSON.parse(preferredWorkerMap || '{}');
+    const val = map[site];
+    if (!val) return [];
+    return Array.isArray(val) ? val : [val];
+  } catch {
+    return [];
+  }
 }
 
 export async function findCoverage(businessId, shiftId) {
@@ -98,75 +99,63 @@ export async function findCoverage(businessId, shiftId) {
     throw new Error('Invalid ID format');
   }
 
-  // Load coverage rules for this business
   let rules = await prisma.coverageRule.findUnique({ where: { businessId } });
   if (!rules) {
-    // Create default rules if none exist
     rules = { noDoubleShiftHours: 8, minRestHours: 8, maxHoursPerWeek: 40, preferredWorkerMap: '{}' };
   }
 
   // Hard floor: minRestHours cannot be below 8
   const minRestHours = Math.max(rules.minRestHours || 8, 8);
+  const noDoubleShiftHours = rules.noDoubleShiftHours ?? 8;
+  const maxHoursPerWeek = rules.maxHoursPerWeek || 40;
 
   const shift = await prisma.shift.findUnique({ where: { id: shiftId } });
   if (!shift) throw new Error('Shift not found');
   if (shift.status === 'filled') throw new Error('Shift already filled');
 
-  // Get all employees for the business with their claimed shifts
   const employees = await prisma.employee.findMany({
-    where: {
-      businessId,
-      status: 'active',
-    },
-    include: {
-      shifts: {
-        where: {
-          date: { gte: shift.date },
-        },
-      },
-    },
+    where: { businessId, status: 'active' },
   });
-
   if (employees.length === 0) return null;
 
-  // Get all shifts in the system for rest period checking (across all employees)
-  const allShifts = await prisma.shift.findMany({
-    where: { businessId },
-  });
+  // All shifts for the business, used to evaluate each employee's existing load.
+  const allShifts = await prisma.shift.findMany({ where: { businessId } });
+
+  const weekStart = getWeekStart(shift.date);
+  const weekEnd = addDays(weekStart, 6);
+  const targetHours = shiftHours(shift);
+  const preferred = preferredForSite(rules.preferredWorkerMap, shift.site);
 
   const candidates = employees
     .filter((emp) => {
       const quals = JSON.parse(emp.qualifications || '[]');
-      return quals.includes(shift.role) || quals.length === 0;
+      return quals.length === 0 || quals.includes(shift.role);
     })
-    .filter((emp) => {
-      // Check rest period violations using all shifts for this employee
-      const violation = checkViolation(emp, shift, allShifts, minRestHours);
-      return violation === null;
-    })
-    .filter((emp) => {
-      // Check weekly hours limit
-      const weekStart = getWeekStart(shift.date);
-      const weeklyHours = calculateWeeklyHours(emp.shifts, weekStart);
-      return weeklyHours < (rules.maxHoursPerWeek || 40);
+    .map((emp) => ({
+      emp,
+      empShifts: allShifts.filter((s) => s.assignedEmployeeId === emp.id),
+    }))
+    .filter(({ empShifts }) => !restViolation(shift, empShifts, minRestHours))
+    .filter(({ empShifts }) => !doubleShiftViolation(shift, empShifts, noDoubleShiftHours))
+    .filter(({ empShifts }) => {
+      const weekHours = empShifts
+        .filter((s) => s.date >= weekStart && s.date <= weekEnd)
+        .reduce((sum, s) => sum + shiftHours(s), 0);
+      return weekHours + targetHours <= maxHoursPerWeek;
     })
     .sort((a, b) => {
-      const aClaims = a.shifts?.length || 0;
-      const bClaims = b.shifts?.length || 0;
-      return aClaims - bClaims;
+      // Preferred workers for the site come first.
+      const aPref = preferred.includes(a.emp.id) ? 0 : 1;
+      const bPref = preferred.includes(b.emp.id) ? 0 : 1;
+      if (aPref !== bPref) return aPref - bPref;
+      // Then load-balance by fewest upcoming assigned shifts.
+      const aUpcoming = a.empShifts.filter((s) => s.date >= shift.date).length;
+      const bUpcoming = b.empShifts.filter((s) => s.date >= shift.date).length;
+      return aUpcoming - bUpcoming;
     });
 
   if (candidates.length === 0) return null;
-  return candidates[0];
-}
-
-// Helper to get ISO week start date (Monday)
-function getWeekStart(dateStr) {
-  const date = new Date(dateStr);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
-  return monday.toISOString().split('T')[0];
+  return candidates[0].emp;
 }
 
 export async function applyCoverage(businessId, shiftId) {

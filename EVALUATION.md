@@ -34,11 +34,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Bugs / correctness
 
-- [ ] Weekly-hours check undercounts: `findCoverage` loads shifts with `date >= shift.date` (`coverage.js:118-130`), hiding earlier-in-week shifts from `calculateWeeklyHours` → `maxHoursPerWeek` can be exceeded
-- [ ] Dead/broken code: `violatesRestPeriod` (`coverage.js:27`) and `getEmployeeShiftsInRange` (`coverage.js:40`) are unused; the latter queries non-existent `shift.employeeId` (should be `assignedEmployeeId`)
-- [ ] Rules never enforced: `noDoubleShiftHours` and `preferredWorkerMap` exist in schema but `findCoverage` ignores them (only rest hours + weekly cap checked)
-- [ ] Overnight shifts inconsistent: `calculateWeeklyHours` adds 24h when end<start (`coverage.js:92`) but `shiftEndAsDate` (`coverage.js:20`) does not → wrong rest-period math for shifts crossing midnight
-- [ ] Timezone bug: `getWeekStart` (`coverage.js:166`) does `new Date(dateStr)` (UTC) then reads with local getters → off-by-one near boundaries
+- [x] Weekly-hours check undercount fixed: hours now summed over the full ISO week (Mon–Sun) from the business's shifts, and the target shift's own hours are included so `maxHoursPerWeek` is actually enforced
+- [x] Dead/broken code removed: deleted unused `violatesRestPeriod`, `getEmployeeShiftsInRange` (referenced non-existent `shift.employeeId`), `timeToMinutes`, and stray `sanitizeError`
+- [x] Rules now enforced: `noDoubleShiftHours` (reject a 2nd shift starting within N hours) and `preferredWorkerMap` (preferred employees for a site sorted first) applied in `findCoverage`
+- [x] Overnight shifts handled consistently via a single `shiftInterval` helper (end rolls to next day when end<=start); used for duration, rest gaps, and double-shift checks
+- [x] Timezone bug fixed: `getWeekStart` now parses date components in local time and always lands on Monday (verified Wed/Sun/Mon → same Monday)
 - [x] Prisma version mismatch: aligned client + CLI to `5.22.0` across the workspace (clean reinstall); `@prisma/client` moved to dependencies. Also hardened `sms.js` to skip Twilio init unless `accountSid` starts with `AC` (was crashing boot with placeholder creds)
 - [ ] No migrations: only `schema.prisma`, no `migrations/` folder, but README says `prisma migrate dev`. Generate a baseline migration
 
