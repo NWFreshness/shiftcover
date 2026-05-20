@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import CoverageToggle from '@/components/CoverageToggle';
 import ShiftModal from '@/components/ShiftModal';
@@ -76,12 +77,20 @@ export default function ManagerDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
           <p className="text-sm text-gray-500 mt-1">Week of {new Date().toLocaleDateString()}</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
-        >
-          Add Shift
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/manager/settings"
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
+          >
+            Settings
+          </Link>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
+          >
+            Add Shift
+          </button>
+        </div>
       </div>
 
       {/* Coverage Stats */}

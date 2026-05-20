@@ -80,3 +80,22 @@ export const shiftAssignSchema = z.object({
 export const claimSchema = z.object({
   shiftId: z.string().uuid(),
 });
+
+export const coverageRuleSchema = z.object({
+  minRestHours: z.number().int().min(0).max(168).optional(),
+  noDoubleShiftHours: z.number().int().min(0).max(168).optional(),
+  maxHoursPerWeek: z.number().int().min(1).max(168).optional(),
+  preferredWorkerMap: z
+    .record(z.string(), z.union([z.string().uuid(), z.array(z.string().uuid())]))
+    .optional(),
+});
+
+export const availabilitySchema = z.object({
+  date: dateStr,
+  available: z.boolean(),
+});
+
+export const swapCreateSchema = z.object({
+  shiftId: z.string().uuid(),
+  targetEmployeeId: z.string().uuid(),
+});

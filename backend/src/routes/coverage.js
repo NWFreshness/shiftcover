@@ -1,13 +1,74 @@
 import { Router } from 'express';
+import prisma from '../lib/prisma.js';
 import { applyCoverage, fillAllOpenShifts, getCoverageStats, findCoverage } from '../services/coverage.js';
 import { requireManager } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { coverageRuleSchema } from '../schemas.js';
 
 const router = Router();
+
+const RULE_DEFAULTS = {
+  minRestHours: 10,
+  noDoubleShiftHours: 8,
+  maxHoursPerWeek: 40,
+  preferredWorkerMap: {},
+};
 
 function sanitizeError(res, error) {
   console.error('Server error:', error);
   res.status(500).json({ error: 'Internal server error' });
 }
+
+function serializeRules(rule) {
+  if (!rule) return RULE_DEFAULTS;
+  let preferredWorkerMap = {};
+  try {
+    preferredWorkerMap = JSON.parse(rule.preferredWorkerMap || '{}');
+  } catch {
+    preferredWorkerMap = {};
+  }
+  return {
+    minRestHours: rule.minRestHours,
+    noDoubleShiftHours: rule.noDoubleShiftHours,
+    maxHoursPerWeek: rule.maxHoursPerWeek,
+    preferredWorkerMap,
+  };
+}
+
+// Get the business's auto-coverage rules (defaults if none saved yet)
+router.get('/rules', requireManager, async (req, res) => {
+  try {
+    const rule = await prisma.coverageRule.findUnique({
+      where: { businessId: req.auth.businessId },
+    });
+    res.json({ rules: serializeRules(rule) });
+  } catch (error) {
+    sanitizeError(res, error);
+  }
+});
+
+// Create or update the business's auto-coverage rules
+router.put('/rules', requireManager, validate(coverageRuleSchema), async (req, res) => {
+  try {
+    const { minRestHours, noDoubleShiftHours, maxHoursPerWeek, preferredWorkerMap } = req.body;
+    const data = {};
+    if (minRestHours !== undefined) data.minRestHours = minRestHours;
+    if (noDoubleShiftHours !== undefined) data.noDoubleShiftHours = noDoubleShiftHours;
+    if (maxHoursPerWeek !== undefined) data.maxHoursPerWeek = maxHoursPerWeek;
+    if (preferredWorkerMap !== undefined) {
+      data.preferredWorkerMap = JSON.stringify(preferredWorkerMap);
+    }
+
+    const rule = await prisma.coverageRule.upsert({
+      where: { businessId: req.auth.businessId },
+      update: data,
+      create: { businessId: req.auth.businessId, ...data },
+    });
+    res.json({ rules: serializeRules(rule) });
+  } catch (error) {
+    sanitizeError(res, error);
+  }
+});
 
 router.post('/auto/:shiftId', requireManager, async (req, res) => {
   try {
