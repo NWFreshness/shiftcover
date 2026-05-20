@@ -23,7 +23,20 @@ export async function findCoverage(businessId, shiftId) {
   // All shifts for the business, used to evaluate each employee's existing load.
   const allShifts = await prisma.shift.findMany({ where: { businessId } });
 
-  return selectCandidate(shift, employees, allShifts, rules);
+  // Dates each employee has marked unavailable.
+  const unavailableRows = await prisma.availability.findMany({
+    where: {
+      available: false,
+      employee: { businessId },
+    },
+    select: { employeeId: true, date: true },
+  });
+  const unavailable = {};
+  for (const row of unavailableRows) {
+    (unavailable[row.employeeId] ||= []).push(row.date);
+  }
+
+  return selectCandidate(shift, employees, allShifts, rules, unavailable);
 }
 
 export async function applyCoverage(businessId, shiftId) {

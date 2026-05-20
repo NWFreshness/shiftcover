@@ -115,6 +115,22 @@ test('selectCandidate: preferred worker for the site is chosen first', () => {
   assert.equal(chosen.id, 'e2');
 });
 
+test('selectCandidate: excludes an employee marked unavailable for the date', () => {
+  const target = shift('t', '2026-05-20', '09:00', '17:00', { role: 'Server' });
+  const employees = [emp('e1', ['Server']), emp('e2', ['Server'])];
+  const unavailable = { e1: ['2026-05-20'] };
+  const chosen = selectCandidate(target, employees, [], null, unavailable);
+  assert.equal(chosen.id, 'e2');
+});
+
+test('selectCandidate: unavailability on a different date does not exclude', () => {
+  const target = shift('t', '2026-05-20', '09:00', '17:00', { role: 'Server' });
+  const employees = [emp('e1', ['Server'])];
+  const unavailable = { e1: ['2026-05-21'] };
+  const chosen = selectCandidate(target, employees, [], null, unavailable);
+  assert.equal(chosen.id, 'e1');
+});
+
 test('selectCandidate: load-balances toward the employee with fewer upcoming shifts', () => {
   const target = shift('t', '2026-05-20', '09:00', '17:00', { role: 'Server' });
   const employees = [emp('e1', ['Server']), emp('e2', ['Server'])];

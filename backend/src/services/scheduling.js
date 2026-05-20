@@ -103,7 +103,8 @@ export function effectiveRules(rules) {
 
 // Choose the best eligible employee for an open shift, or null if none qualify.
 // `employees` are active employees; `allShifts` is every shift in the business.
-export function selectCandidate(shift, employees, allShifts, rules) {
+// `unavailable` maps employeeId -> array of "YYYY-MM-DD" dates they can't work.
+export function selectCandidate(shift, employees, allShifts, rules, unavailable = {}) {
   const { minRestHours, noDoubleShiftHours, maxHoursPerWeek, preferredWorkerMap } =
     effectiveRules(rules);
 
@@ -113,6 +114,7 @@ export function selectCandidate(shift, employees, allShifts, rules) {
   const preferred = preferredForSite(preferredWorkerMap, shift.site);
 
   const candidates = employees
+    .filter((emp) => !(unavailable[emp.id] || []).includes(shift.date))
     .filter((emp) => {
       const quals = JSON.parse(emp.qualifications || '[]');
       return quals.length === 0 || quals.includes(shift.role);

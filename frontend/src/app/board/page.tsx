@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import OpenShiftCard from '@/components/OpenShiftCard';
 import { apiFetch, getToken } from '@/lib/auth';
 
@@ -59,7 +60,12 @@ export default function EmployeeBoard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Open Shifts</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Open Shifts</h1>
+        <Link href="/availability" className="text-sm text-indigo-600 hover:underline">
+          My Availability
+        </Link>
+      </div>
 
       {message && (
         <div
