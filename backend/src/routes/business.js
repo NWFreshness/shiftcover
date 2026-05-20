@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { requireManager } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { businessUpdateSchema } from '../schemas.js';
 
 const router = Router();
 
@@ -22,12 +24,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/', requireManager, async (req, res) => {
+router.put('/', requireManager, validate(businessUpdateSchema), async (req, res) => {
   try {
     const { name, industryType } = req.body;
-    if (!name && !industryType) {
-      return res.status(400).json({ error: 'At least one field (name or industryType) is required' });
-    }
     const updateData = {};
     if (name) updateData.name = name;
     if (industryType) updateData.industryType = industryType;

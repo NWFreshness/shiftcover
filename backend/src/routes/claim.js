@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
+import { validate } from '../middleware/validate.js';
+import { claimSchema } from '../schemas.js';
 
 const router = Router();
 
@@ -11,14 +13,10 @@ function sanitizeError(error) {
 }
 
 // Authenticated employee claims an open shift
-router.post('/', async (req, res) => {
+router.post('/', validate(claimSchema), async (req, res) => {
   try {
     const { shiftId } = req.body;
     const employeeId = req.auth.employeeId;
-
-    if (!shiftId || !uuidRegex.test(shiftId)) {
-      return res.status(400).json({ error: 'Valid shiftId required' });
-    }
 
     const result = await prisma.$transaction(async (tx) => {
       const shift = await tx.shift.findUnique({ where: { id: shiftId } });

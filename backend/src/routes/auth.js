@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { signToken } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { registerSchema, loginSchema } from '../schemas.js';
 import { generateInviteCode } from '../utils/codeGen.js';
 
 const router = Router();
@@ -20,15 +22,9 @@ async function uniqueInviteCode() {
 }
 
 // Bootstrap a new business + its first manager
-router.post('/register', async (req, res) => {
+router.post('/register', validate(registerSchema), async (req, res) => {
   try {
     const { businessName, industryType, managerName, phone } = req.body;
-    if (!businessName || !industryType || !managerName || !phone) {
-      return res
-        .status(400)
-        .json({ error: 'businessName, industryType, managerName, phone required' });
-    }
-
     const inviteCode = await uniqueInviteCode();
     const result = await prisma.$transaction(async (tx) => {
       const business = await tx.business.create({
@@ -59,12 +55,9 @@ router.post('/register', async (req, res) => {
 });
 
 // Log in with a 6-digit invite code
-router.post('/login', async (req, res) => {
+router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { code } = req.body;
-    if (!code || !/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: 'A 6-digit code is required' });
-    }
     const employee = await prisma.employee.findUnique({ where: { inviteCode: code } });
     if (!employee || employee.status !== 'active') {
       return res.status(401).json({ error: 'Invalid code' });

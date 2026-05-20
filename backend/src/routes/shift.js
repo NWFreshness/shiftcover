@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { requireManager } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { shiftCreateSchema, shiftUpdateSchema, shiftAssignSchema } from '../schemas.js';
 
 const router = Router();
 
@@ -33,12 +35,9 @@ router.get('/', async (req, res) => {
 });
 
 // Create a shift
-router.post('/', requireManager, async (req, res) => {
+router.post('/', requireManager, validate(shiftCreateSchema), async (req, res) => {
   try {
     const { date, startTime, endTime, site, role, assignedEmployeeId } = req.body;
-    if (!date || !startTime || !endTime || !role) {
-      return res.status(400).json({ error: 'date, startTime, endTime, role required' });
-    }
     const shift = await prisma.shift.create({
       data: {
         businessId: req.auth.businessId,
@@ -73,7 +72,7 @@ router.get('/id/:id', async (req, res) => {
 });
 
 // Assign employee to shift
-router.put('/:id/assign', requireManager, async (req, res) => {
+router.put('/:id/assign', requireManager, validate(shiftAssignSchema), async (req, res) => {
   try {
     if (!(await ownedShift(req.params.id, req.auth.businessId))) {
       return res.status(404).json({ error: 'Not found' });
@@ -94,7 +93,7 @@ router.put('/:id/assign', requireManager, async (req, res) => {
 });
 
 // Update shift
-router.put('/:id', requireManager, async (req, res) => {
+router.put('/:id', requireManager, validate(shiftUpdateSchema), async (req, res) => {
   try {
     if (!(await ownedShift(req.params.id, req.auth.businessId))) {
       return res.status(404).json({ error: 'Not found' });

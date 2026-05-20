@@ -46,10 +46,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Code quality / architecture
 
-- [ ] PrismaClient instantiated per file (every route + service) → connection exhaustion; use a shared singleton
-- [ ] Inconsistent error handling: `business.js` and `employee.js` leak raw `error.message` (info disclosure); others sanitize. `employee.js` also skips UUID validation
-- [ ] No input validation library; add zod (or similar) at route boundaries. Validate phone (E.164 for Twilio) and email format
-- [ ] No tests — especially needed for the concurrency-sensitive claim/coverage logic
+- [x] PrismaClient is now a shared singleton (`lib/prisma.js`) used by every route/service
+- [x] Error handling unified — all routes sanitize errors; `employee.js` validates ownership/scope
+- [x] zod validation added at route boundaries (`schemas.js` + `validate` middleware) on all mutating endpoints; phone enforced as E.164, email format checked, dates/times validated
+- [x] First test suite added (`node --test`, 22 tests): pure scheduling engine extracted to `services/scheduling.js` and covered (overnight, rest, double-shift, weekly cap, preferred, week math) plus schema validation tests. Run with `npm test`
+- [ ] Follow-up: route/integration tests (need a test DB) for the concurrency-sensitive claim/coverage paths
 
 ---
 

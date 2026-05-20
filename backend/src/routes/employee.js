@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { requireManager } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { employeeCreateSchema, employeeUpdateSchema } from '../schemas.js';
 import { generateInviteCode } from '../utils/codeGen.js';
 
 const router = Router();
@@ -32,12 +34,9 @@ router.get('/', async (req, res) => {
 });
 
 // Create employee with invite code
-router.post('/', requireManager, async (req, res) => {
+router.post('/', requireManager, validate(employeeCreateSchema), async (req, res) => {
   try {
     const { name, phone, email, role, qualifications } = req.body;
-    if (!name || !phone || !role) {
-      return res.status(400).json({ error: 'name, phone, role required' });
-    }
     const inviteCode = await uniqueInviteCode();
     const employee = await prisma.employee.create({
       data: {
@@ -70,7 +69,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update employee
-router.put('/:id', requireManager, async (req, res) => {
+router.put('/:id', requireManager, validate(employeeUpdateSchema), async (req, res) => {
   try {
     const existing = await prisma.employee.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.businessId !== req.auth.businessId) {
