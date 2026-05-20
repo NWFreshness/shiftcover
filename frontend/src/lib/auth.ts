@@ -2,15 +2,17 @@
 
 const TOKEN_KEY = 'shiftcover_token';
 const MANAGER_KEY = 'shiftcover_is_manager';
+const EMPLOYEE_KEY = 'shiftcover_employee_id';
 
 export interface Session {
   token: string;
   isManager: boolean;
 }
 
-export function saveSession(token: string, isManager: boolean) {
+export function saveSession(token: string, isManager: boolean, employeeId?: string) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(MANAGER_KEY, isManager ? '1' : '0');
+  if (employeeId) localStorage.setItem(EMPLOYEE_KEY, employeeId);
 }
 
 export function getToken(): string | null {
@@ -23,9 +25,15 @@ export function isManager(): boolean {
   return localStorage.getItem(MANAGER_KEY) === '1';
 }
 
+export function getEmployeeId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(EMPLOYEE_KEY);
+}
+
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(MANAGER_KEY);
+  localStorage.removeItem(EMPLOYEE_KEY);
 }
 
 // fetch wrapper that attaches the auth token and JSON headers

@@ -9,6 +9,7 @@ import shiftRoutes from './routes/shift.js';
 import claimRoutes from './routes/claim.js';
 import coverageRoutes from './routes/coverage.js';
 import availabilityRoutes from './routes/availability.js';
+import swapRoutes from './routes/swap.js';
 import { requireAuth } from './middleware/auth.js';
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use('/api/shifts', apiLimiter, requireAuth, shiftRoutes);
 app.use('/api/claims', apiLimiter, requireAuth, claimRoutes);
 app.use('/api/coverage', apiLimiter, requireAuth, coverageRoutes);
 app.use('/api/availability', apiLimiter, requireAuth, availabilityRoutes);
+app.use('/api/swaps', apiLimiter, requireAuth, swapRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

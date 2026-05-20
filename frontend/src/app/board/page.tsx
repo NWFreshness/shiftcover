@@ -62,9 +62,14 @@ export default function EmployeeBoard() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Open Shifts</h1>
-        <Link href="/availability" className="text-sm text-indigo-600 hover:underline">
-          My Availability
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/swaps" className="text-sm text-indigo-600 hover:underline">
+            Swaps
+          </Link>
+          <Link href="/availability" className="text-sm text-indigo-600 hover:underline">
+            My Availability
+          </Link>
+        </div>
       </div>
 
       {message && (

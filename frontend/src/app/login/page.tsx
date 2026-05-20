@@ -25,7 +25,7 @@ export default function Login() {
         setError(data.error || 'Login failed');
         return;
       }
-      saveSession(data.token, data.isManager);
+      saveSession(data.token, data.isManager, data.employee?.id);
       router.push(data.isManager ? '/manager' : '/board');
     } catch {
       setError('Network error');
