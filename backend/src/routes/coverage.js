@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { applyCoverage, fillAllOpenShifts, getCoverageStats, findCoverage } from '../services/coverage.js';
+import { notifyUncoveredShifts } from '../services/alerts.js';
 import { requireManager } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { coverageRuleSchema } from '../schemas.js';
@@ -108,6 +109,20 @@ router.get('/preview/:shiftId', requireManager, async (req, res) => {
     if (error.message === 'Shift not found') {
       return res.status(404).json({ error: error.message });
     }
+    sanitizeError(res, error);
+  }
+});
+
+// Manually check for shifts that have been uncovered too long and alert managers
+router.post('/check-uncovered', requireManager, async (req, res) => {
+  try {
+    const thresholdHours = Number(process.env.ALERT_THRESHOLD_HOURS) || 4;
+    const summary = await notifyUncoveredShifts({
+      businessId: req.auth.businessId,
+      thresholdHours,
+    });
+    res.json(summary);
+  } catch (error) {
     sanitizeError(res, error);
   }
 });

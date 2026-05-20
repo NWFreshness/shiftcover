@@ -68,11 +68,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ## New features to consider
 
 ### Close PRD gaps (promised, missing)
-- [ ] Invite-code auth flow: generate → SMS → verify → issue session/JWT (unblocks everything else)
-- [ ] CoverageRule CRUD endpoint (Auto-mode toggle has nothing to configure)
-- [ ] Swap requests: model exists, no routes/UI
-- [ ] Availability: PRD 3.4 not in schema; coverage engine should respect it
-- [ ] Auto-detection of uncovered shifts + manager alerts ("uncovered > X hours", "couldn't fill") via scheduled job
+- [x] Invite-code auth flow: register/login issue JWT sessions
+- [x] CoverageRule CRUD: GET/PUT `/api/coverage/rules` + `/manager/settings` UI
+- [x] Swap requests: `/api/swaps` (request → accept → manager approve/reject) + employee and manager UIs
+- [x] Availability: `Availability` model + `/api/availability` + `/availability` UI; coverage engine excludes unavailable employees
+- [x] Uncovered-shift alerts: `services/alerts.js` SMSes managers about shifts open > N hours (marked via `Shift.alertSentAt`); opt-in interval job (`ALERT_INTERVAL_MIN`) + manual `POST /api/coverage/check-uncovered` and a dashboard button
 
 ### Beyond the PRD
 - [ ] Real-time board updates (SSE/websockets) to avoid claim races (loser currently just gets 409)

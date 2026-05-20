@@ -10,6 +10,7 @@ import claimRoutes from './routes/claim.js';
 import coverageRoutes from './routes/coverage.js';
 import availabilityRoutes from './routes/availability.js';
 import swapRoutes from './routes/swap.js';
+import { notifyUncoveredShifts } from './services/alerts.js';
 import { requireAuth } from './middleware/auth.js';
 
 dotenv.config();
@@ -39,3 +40,16 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`ShiftCover API running on port ${PORT}`);
 });
+
+// Optional background job: alert managers about long-uncovered shifts.
+// Enable by setting ALERT_INTERVAL_MIN (minutes) in the environment.
+const alertIntervalMin = Number(process.env.ALERT_INTERVAL_MIN);
+if (alertIntervalMin > 0) {
+  const thresholdHours = Number(process.env.ALERT_THRESHOLD_HOURS) || 4;
+  setInterval(() => {
+    notifyUncoveredShifts({ thresholdHours }).catch((err) =>
+      console.error('Uncovered-shift alert job failed:', err),
+    );
+  }, alertIntervalMin * 60 * 1000);
+  console.log(`Uncovered-shift alerts every ${alertIntervalMin} min (threshold ${thresholdHours}h)`);
+}

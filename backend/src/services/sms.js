@@ -52,6 +52,19 @@ export async function sendOpenShiftAlert(phone, shiftDetails) {
   }
 }
 
+export async function sendSms(phone, message) {
+  if (!client) {
+    console.log('SMS disabled: Twilio not configured');
+    return { success: false, reason: 'SMS disabled' };
+  }
+  try {
+    const result = await client.messages.create({ body: message, from: fromNumber, to: phone });
+    return { success: true, sid: result.sid };
+  } catch (error) {
+    throw new Error(sanitizeError(error));
+  }
+}
+
 export function isSMSEnabled() {
   return client !== null;
 }

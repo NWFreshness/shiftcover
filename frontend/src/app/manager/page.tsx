@@ -34,6 +34,7 @@ export default function ManagerDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, filled: 0, open: 0 });
+  const [status, setStatus] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [statsRes, empRes] = await Promise.all([
@@ -55,6 +56,19 @@ export default function ManagerDashboard() {
     }
     loadData();
   }, [router, loadData]);
+
+  const handleCheckUncovered = async () => {
+    const res = await apiFetch('/api/coverage/check-uncovered', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      setStatus(
+        data.shiftsAlerted > 0
+          ? `Alerted managers about ${data.shiftsAlerted} uncovered shift(s)`
+          : 'No long-uncovered shifts to alert',
+      );
+      setTimeout(() => setStatus(null), 4000);
+    }
+  };
 
   const handleAddShift = async (data: ShiftFormData) => {
     const res = await apiFetch('/api/shifts', {
@@ -78,6 +92,12 @@ export default function ManagerDashboard() {
           <p className="text-sm text-gray-500 mt-1">Week of {new Date().toLocaleDateString()}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleCheckUncovered}
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
+          >
+            Check Uncovered
+          </button>
           <Link
             href="/manager/swaps"
             className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
@@ -98,6 +118,12 @@ export default function ManagerDashboard() {
           </button>
         </div>
       </div>
+
+      {status && (
+        <div className="mb-4 p-3 rounded-md text-sm bg-blue-50 text-blue-700 border border-blue-200">
+          {status}
+        </div>
+      )}
 
       {/* Coverage Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
