@@ -13,9 +13,11 @@ model Business {
   industryType String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  onboardingCompletedAt DateTime?
   employees    Employee[]
   shifts       Shift[]
   coverageRules CoverageRule?
+  defaultShifts DefaultShift[]
 }
 
 model Employee {
@@ -30,12 +32,26 @@ model Employee {
   status       String   @default("active")
   inviteCode   String?  @unique
   isManager    Boolean  @default(false)
+  onboardedAt  DateTime?
   createdAt    DateTime @default(now())
   shifts       Shift[]
   shiftClaims  ShiftClaim[]
   swapRequests SwapRequest[] @relation("SwapRequester")
   swapTargets  SwapRequest[] @relation("SwapTarget")
   availability Availability[]
+}
+
+model DefaultShift {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+  label       String
+  role        String
+  startTime   String
+  endTime     String
+  site        String?
+  daysOfWeek  String   @default("[]")
+  createdAt   DateTime @default(now())
 }
 
 model Shift {

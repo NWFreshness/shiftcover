@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import CoverageToggle from '@/components/CoverageToggle';
 import ShiftModal from '@/components/ShiftModal';
+import TopBar from '@/components/TopBar';
 import { apiFetch, getToken, isManager } from '@/lib/auth';
 
 interface ShiftFormData {
@@ -84,67 +85,75 @@ export default function ManagerDashboard() {
     }
   };
 
+  const coverage = stats.total > 0 ? Math.round((stats.filled / stats.total) * 100) : 0;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
-          <p className="text-sm text-gray-500 mt-1">Week of {new Date().toLocaleDateString()}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleCheckUncovered}
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
-          >
-            Check Uncovered
-          </button>
-          <Link
-            href="/manager/swaps"
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
-          >
-            Swaps
-          </Link>
-          <Link
-            href="/manager/settings"
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
-          >
-            Settings
-          </Link>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
-          >
-            Add Shift
-          </button>
-        </div>
-      </div>
+    <>
+      <TopBar>
+        <Link href="/manager/employees" className="btn btn-ghost btn-sm">
+          Team
+        </Link>
+        <Link href="/manager/swaps" className="btn btn-ghost btn-sm">
+          Swaps
+        </Link>
+        <Link href="/manager/settings" className="btn btn-ghost btn-sm">
+          Settings
+        </Link>
+      </TopBar>
 
-      {status && (
-        <div className="mb-4 p-3 rounded-md text-sm bg-blue-50 text-blue-700 border border-blue-200">
-          {status}
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 animate-rise">
+          <div>
+            <span className="label-stamp">Manager · Schedule</span>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+              This Week
+            </h1>
+            <p className="mt-1 font-mono text-xs text-ink-soft">
+              Week of {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleCheckUncovered} className="btn btn-ghost btn-sm">
+              Check Uncovered
+            </button>
+            <button onClick={() => setModalOpen(true)} className="btn btn-primary btn-sm">
+              <span className="text-base leading-none">+</span> Add Shift
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Coverage Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-500">Total Shifts</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-green-600">{stats.filled}</div>
-          <div className="text-sm text-gray-500">Filled</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-amber-600">{stats.open}</div>
-          <div className="text-sm text-gray-500">Open</div>
-        </div>
-      </div>
+        {status && (
+          <div className="banner banner-info mb-4 animate-rise">{status}</div>
+        )}
 
-      <CoverageToggle />
+        {/* Coverage stats */}
+        <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
+          <StatCard label="Total Shifts" value={stats.total} tone="ink" delay={0.05} />
+          <StatCard label="Filled" value={stats.filled} tone="sage" delay={0.1} />
+          <StatCard label="Open" value={stats.open} tone="marigold" delay={0.15} />
+        </div>
 
-      <div className="mt-6">
-        <ScheduleGrid />
+        {/* Coverage meter */}
+        <div className="card mb-6 animate-rise p-4" style={{ animationDelay: '0.18s' }}>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="label-stamp">Coverage</span>
+            <span className="font-mono text-sm font-semibold text-ink">{coverage}%</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-surface-sunk ring-1 ring-line">
+            <div
+              className="h-full rounded-full bg-pine transition-all duration-700"
+              style={{ width: `${coverage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="animate-rise" style={{ animationDelay: '0.22s' }}>
+          <CoverageToggle />
+        </div>
+
+        <div className="mt-6 animate-rise" style={{ animationDelay: '0.26s' }}>
+          <ScheduleGrid />
+        </div>
       </div>
 
       <ShiftModal
@@ -153,6 +162,30 @@ export default function ManagerDashboard() {
         onSave={handleAddShift}
         employees={employees}
       />
+    </>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+  delay,
+}: {
+  label: string;
+  value: number;
+  tone: 'ink' | 'sage' | 'marigold';
+  delay: number;
+}) {
+  const color =
+    tone === 'sage' ? 'text-sage' : tone === 'marigold' ? 'text-marigold' : 'text-ink';
+  const accent =
+    tone === 'sage' ? 'bg-sage' : tone === 'marigold' ? 'bg-marigold' : 'bg-ink/40';
+  return (
+    <div className="card relative animate-rise overflow-hidden p-4" style={{ animationDelay: `${delay}s` }}>
+      <span className={`absolute left-0 top-0 h-full w-1 ${accent}`} />
+      <div className={`font-mono text-3xl font-semibold tabular-nums ${color}`}>{value}</div>
+      <div className="label-stamp mt-1">{label}</div>
     </div>
   );
 }

@@ -10,6 +10,8 @@ import claimRoutes from './routes/claim.js';
 import coverageRoutes from './routes/coverage.js';
 import availabilityRoutes from './routes/availability.js';
 import swapRoutes from './routes/swap.js';
+import defaultShiftRoutes from './routes/defaultShift.js';
+import onboardingRoutes from './routes/onboarding.js';
 import { notifyUncoveredShifts } from './services/alerts.js';
 import { requireAuth } from './middleware/auth.js';
 
@@ -35,6 +37,8 @@ app.use('/api/claims', apiLimiter, requireAuth, claimRoutes);
 app.use('/api/coverage', apiLimiter, requireAuth, coverageRoutes);
 app.use('/api/availability', apiLimiter, requireAuth, availabilityRoutes);
 app.use('/api/swaps', apiLimiter, requireAuth, swapRoutes);
+app.use('/api/default-shifts', apiLimiter, requireAuth, defaultShiftRoutes);
+app.use('/api/onboarding', apiLimiter, requireAuth, onboardingRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

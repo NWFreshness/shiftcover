@@ -17,6 +17,11 @@ interface Shift {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 7am to 6pm
 
+function hourLabel(hour: number) {
+  if (hour === 12) return '12P';
+  return hour > 12 ? `${hour - 12}P` : `${hour}A`;
+}
+
 export default function ScheduleGrid() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,70 +36,102 @@ export default function ScheduleGrid() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Get week starting from Sunday
   const today = new Date();
+  const todayIso = today.toISOString().split('T')[0];
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay());
-  
+
   const weekDays = DAYS.map((day, i) => {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + i);
-    return {
-      name: day,
-      date: date.toISOString().split('T')[0],
-    };
+    return { name: day, date: date.toISOString().split('T')[0] };
   });
 
-  const getShiftsForDay = (date: string) =>
-    shifts.filter((s) => s.date === date);
+  const getShiftsForDay = (date: string) => shifts.filter((s) => s.date === date);
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading schedule...</div>;
+    return (
+      <div className="card p-10 text-center">
+        <span className="label-stamp animate-pulse">Loading schedule…</span>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="card overflow-hidden">
       {/* Header */}
-      <div className="grid grid-cols-8 border-b border-gray-200 bg-gray-50">
-        <div className="p-2 text-center text-sm font-medium text-gray-500">Time</div>
-        {weekDays.map((day) => (
-          <div key={day.date} className="p-2 text-center text-sm font-medium text-gray-900">
-            <div>{day.name}</div>
-            <div className="text-xs text-gray-500">{day.date.slice(5)}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-[3rem_repeat(7,1fr)] border-b border-line bg-surface-sunk sm:grid-cols-[3.5rem_repeat(7,1fr)]">
+        <div className="flex items-center justify-center py-2.5">
+          <span className="label-stamp">Hr</span>
+        </div>
+        {weekDays.map((day) => {
+          const isToday = day.date === todayIso;
+          return (
+            <div
+              key={day.date}
+              className={`border-l border-line py-2 text-center ${
+                isToday ? 'bg-pine-soft' : ''
+              }`}
+            >
+              <div
+                className={`font-display text-sm font-bold ${
+                  isToday ? 'text-pine' : 'text-ink'
+                }`}
+              >
+                {day.name}
+              </div>
+              <div className="font-mono text-[0.65rem] text-ink-soft">{day.date.slice(5)}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Grid */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-line/60">
         {HOURS.map((hour) => (
-          <div key={hour} className="grid grid-cols-8 min-h-[60px]">
-            <div className="p-2 text-xs text-gray-500 text-right pr-4">
-              {hour > 12 ? `${hour - 12}PM` : hour === 12 ? '12PM' : `${hour}AM`}
+          <div
+            key={hour}
+            className="grid min-h-[58px] grid-cols-[3rem_repeat(7,1fr)] sm:grid-cols-[3.5rem_repeat(7,1fr)]"
+          >
+            <div className="flex items-start justify-end pr-2 pt-1.5">
+              <span className="font-mono text-[0.65rem] text-ink-faint">{hourLabel(hour)}</span>
             </div>
             {weekDays.map((day) => {
-              const dayShifts = getShiftsForDay(day.date).filter((s) => {
-                const shiftHour = parseInt(s.startTime.split(':')[0]);
-                return shiftHour === hour;
-              });
+              const isToday = day.date === todayIso;
+              const dayShifts = getShiftsForDay(day.date).filter(
+                (s) => parseInt(s.startTime.split(':')[0]) === hour,
+              );
               return (
-                <div key={`${day.date}-${hour}`} className="border-l border-gray-100 p-1">
+                <div
+                  key={`${day.date}-${hour}`}
+                  className={`border-l border-line/70 p-1 ${isToday ? 'bg-pine-soft/35' : ''}`}
+                >
                   {dayShifts.map((shift) => (
                     <div
                       key={shift.id}
-                      className={`text-xs p-1 rounded mb-1 ${
+                      className={`mb-1 rounded border p-1.5 ${
                         shift.status === 'filled'
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          ? 'border-sage/30 bg-sage-soft'
+                          : 'border-marigold/30 bg-marigold-soft'
                       }`}
                     >
-                      <div className="font-medium">{shift.role}</div>
-                      <div className="text-[10px] opacity-75">
-                        {shift.startTime}-{shift.endTime}
+                      <div
+                        className={`text-xs font-semibold leading-tight ${
+                          shift.status === 'filled' ? 'text-sage-ink' : 'text-marigold-ink'
+                        }`}
+                      >
+                        {shift.role}
                       </div>
-                      {shift.assignedEmployee && (
-                        <div className="text-[10px] font-medium mt-1">
+                      <div className="font-mono text-[0.62rem] text-ink-soft">
+                        {shift.startTime}–{shift.endTime}
+                      </div>
+                      {shift.assignedEmployee ? (
+                        <div className="mt-0.5 truncate text-[0.66rem] font-medium text-ink">
                           {shift.assignedEmployee.name}
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 text-[0.62rem] font-semibold uppercase tracking-wide text-marigold">
+                          Open
                         </div>
                       )}
                     </div>

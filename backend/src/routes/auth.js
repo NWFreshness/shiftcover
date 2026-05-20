@@ -48,7 +48,13 @@ router.post('/register', validate(registerSchema), async (req, res) => {
       businessId: result.business.id,
       isManager: true,
     });
-    res.status(201).json({ token, businessId: result.business.id, inviteCode });
+    res.status(201).json({
+      token,
+      businessId: result.business.id,
+      employeeId: result.manager.id,
+      isManager: true,
+      inviteCode,
+    });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
@@ -72,6 +78,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
       businessId: employee.businessId,
       isManager: employee.isManager,
       employee: { id: employee.id, name: employee.name, role: employee.role },
+      needsOnboarding: !employee.onboardedAt,
     });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });

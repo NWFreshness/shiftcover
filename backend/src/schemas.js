@@ -99,3 +99,20 @@ export const swapCreateSchema = z.object({
   shiftId: z.string().uuid(),
   targetEmployeeId: z.string().uuid(),
 });
+
+export const defaultShiftCreateSchema = z.object({
+  label: z.string().min(1),
+  role: z.string().min(1),
+  startTime: timeStr,
+  endTime: timeStr,
+  site: z.string().optional(),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
+});
+
+export const defaultShiftUpdateSchema = defaultShiftCreateSchema.partial();
+
+export const employeeSelfUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  phone: phone.optional(),
+  email,
+});

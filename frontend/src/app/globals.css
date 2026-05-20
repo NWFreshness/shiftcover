@@ -1,26 +1,328 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   ShiftCover — "The Timecard"
+   Warm paper-and-ink ledger aesthetic with punch-clock details.
+   ============================================================ */
+
+@theme {
+  /* Typography — wired to next/font CSS variables (see layout.tsx) */
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-hanken), sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Paper & ink */
+  --color-paper: #f1ece1;
+  --color-paper-deep: #e7dfce;
+  --color-surface: #fbf8f1;
+  --color-surface-sunk: #f4efe4;
+
+  --color-ink: #221d16;
+  --color-ink-soft: #756a57;
+  --color-ink-faint: #a89c84;
+
+  --color-line: #ddd3bf;
+  --color-line-strong: #c8bb9f;
+
+  /* Brand — deep pine */
+  --color-pine: #1f4d3c;
+  --color-pine-deep: #163a2d;
+  --color-pine-soft: #dde6df;
+  --color-pine-ink: #163a2d;
+
+  /* Attention / open shift — marigold */
+  --color-marigold: #b9670f;
+  --color-marigold-deep: #9a5409;
+  --color-marigold-soft: #f3e2c4;
+  --color-marigold-ink: #7a430a;
+
+  /* Covered / success — sage */
+  --color-sage: #347a57;
+  --color-sage-soft: #d6e7da;
+  --color-sage-ink: #1f5239;
+
+  /* Danger — brick */
+  --color-brick: #a93b2b;
+  --color-brick-soft: #f1d8d1;
+  --color-brick-ink: #7e2a1e;
+
+  /* Info — slate-blue (used sparingly) */
+  --color-slate-note: #355068;
+  --color-slate-soft: #d8e2ea;
+
+  --radius-card: 6px;
+
+  --shadow-card: 0 1px 0 0 #fff inset, 0 1px 2px rgba(34, 29, 22, 0.06),
+    0 8px 24px -16px rgba(34, 29, 22, 0.28);
+  --shadow-pop: 0 1px 0 0 #fff inset, 0 12px 40px -12px rgba(34, 29, 22, 0.45);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* layered atmosphere: warm vignette + faint paper grain */
+    background-image:
+      radial-gradient(120% 90% at 12% -10%, rgba(31, 77, 60, 0.06), transparent 55%),
+      radial-gradient(110% 80% at 100% 0%, rgba(185, 103, 15, 0.05), transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-attachment: fixed, fixed, fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-pine);
+    color: var(--color-surface);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-pine);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* tabular numerals for all the times/dates/stats */
+  input[type="time"],
+  input[type="date"],
+  input[type="number"] {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------- Components ---------- */
+@layer components {
+  .label-stamp {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+  }
+
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1;
+    padding: 0.625rem 1.05rem;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.08s ease, background-color 0.15s ease,
+      box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--color-pine);
+    color: #f4f1e7;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 6px 16px -10px rgba(22, 58, 45, 0.9);
+  }
+  .btn-primary:not(:disabled):hover {
+    background-color: var(--color-pine-deep);
+  }
+
+  .btn-accent {
+    background-color: var(--color-marigold);
+    color: #fcf3e3;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset,
+      0 6px 16px -10px rgba(154, 84, 9, 0.9);
+  }
+  .btn-accent:not(:disabled):hover {
+    background-color: var(--color-marigold-deep);
+  }
+
+  .btn-ghost {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+  .btn-ghost:not(:disabled):hover {
+    background-color: var(--color-surface-sunk);
+    border-color: var(--color-ink-faint);
+  }
+
+  .btn-danger {
+    background-color: var(--color-brick);
+    color: #f7e9e5;
+  }
+  .btn-danger:not(:disabled):hover {
+    background-color: var(--color-brick-ink);
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+  }
+
+  /* Form fields */
+  .field {
+    width: 100%;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line-strong);
+    border-radius: 5px;
+    padding: 0.6rem 0.75rem;
+    color: var(--color-ink);
+    font-size: 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field::placeholder {
+    color: var(--color-ink-faint);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-pine);
+    box-shadow: 0 0 0 3px var(--color-pine-soft);
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: 0.35rem;
+  }
+
+  /* Status chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+  }
+  .chip::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 1px;
+    background: currentColor;
+    opacity: 0.85;
+  }
+  .chip-open {
+    background: var(--color-marigold-soft);
+    color: var(--color-marigold-ink);
+    border-color: rgba(154, 84, 9, 0.22);
+  }
+  .chip-filled {
+    background: var(--color-sage-soft);
+    color: var(--color-sage-ink);
+    border-color: rgba(31, 82, 57, 0.22);
+  }
+  .chip-danger {
+    background: var(--color-brick-soft);
+    color: var(--color-brick-ink);
+    border-color: rgba(126, 42, 30, 0.22);
+  }
+  .chip-info {
+    background: var(--color-slate-soft);
+    color: var(--color-slate-note);
+    border-color: rgba(53, 80, 104, 0.22);
+  }
+  .chip-neutral {
+    background: var(--color-surface-sunk);
+    color: var(--color-ink-soft);
+    border-color: var(--color-line);
+  }
+
+  /* Inline status banners */
+  .banner {
+    border-radius: 5px;
+    border: 1px solid;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+  }
+  .banner-success {
+    background: var(--color-sage-soft);
+    color: var(--color-sage-ink);
+    border-color: rgba(31, 82, 57, 0.25);
+  }
+  .banner-error {
+    background: var(--color-brick-soft);
+    color: var(--color-brick-ink);
+    border-color: rgba(126, 42, 30, 0.25);
+  }
+  .banner-info {
+    background: var(--color-slate-soft);
+    color: var(--color-slate-note);
+    border-color: rgba(53, 80, 104, 0.25);
+  }
+}
+
+/* ---------- Motion ---------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.06) rotate(-1.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-rise {
+  opacity: 0;
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.animate-stamp {
+  animation: stamp-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .animate-rise {
+    opacity: 1;
+  }
 }

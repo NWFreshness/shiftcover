@@ -10,6 +10,17 @@ A lightweight B2B SaaS shift coverage application for small local businesses (5�
 - **SMS Notifications** — Twilio integration sends text messages when shifts open up or are auto-assigned
 - **PWA** — Works on mobile web — add to home screen for app-like experience
 
+## Default Invite Codes (Dev)
+
+These are hardcoded for local development. No registration needed — enter the code on the login page.
+
+| Role     | Code     |
+|----------|----------|
+| Manager  | `789820` |
+| Employee | `996976` |
+
+The manager code grants access to the schedule dashboard, settings, and shift management. The employee code opens the shift board where open shifts can be claimed.
+
 ## Tech Stack
 
 - **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS

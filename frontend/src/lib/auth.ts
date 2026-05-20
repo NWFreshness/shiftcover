@@ -9,6 +9,21 @@ export interface Session {
   isManager: boolean;
 }
 
+export interface RegisterPayload {
+  businessName: string;
+  industryType: string;
+  managerName: string;
+  phone: string;
+}
+
+export interface RegisterResponse {
+  token: string;
+  businessId: string;
+  employeeId: string;
+  isManager: boolean;
+  inviteCode: string;
+}
+
 export function saveSession(token: string, isManager: boolean, employeeId?: string) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(MANAGER_KEY, isManager ? '1' : '0');
@@ -34,6 +49,28 @@ export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(MANAGER_KEY);
   localStorage.removeItem(EMPLOYEE_KEY);
+}
+
+export function normalizePhone(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('+')) return `+${trimmed.slice(1).replace(/\D/g, '')}`;
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return digits ? `+${digits}` : '';
+}
+
+export async function register(payload: RegisterPayload): Promise<RegisterResponse> {
+  const res = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Could not create business');
+  }
+  return data;
 }
 
 // fetch wrapper that attaches the auth token and JSON headers

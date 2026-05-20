@@ -4,8 +4,8 @@
   "description": "Shift coverage for small businesses",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "background_color": "#f1ece1",
+  "theme_color": "#1f4d3c",
   "icons": [
     {
       "src": "/icons/icon-192.svg",

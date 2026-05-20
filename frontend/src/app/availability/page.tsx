@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import TopBar from '@/components/TopBar';
 import { apiFetch, getToken } from '@/lib/auth';
 
 interface Availability {
@@ -48,60 +49,63 @@ export default function AvailabilityPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">My Availability</h1>
-        <Link href="/board" className="text-sm text-indigo-600 hover:underline">
+    <>
+      <TopBar>
+        <Link href="/board" className="btn btn-ghost btn-sm">
           ← Open Shifts
         </Link>
-      </div>
+      </TopBar>
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6 flex items-end gap-3">
-        <label className="flex-1">
-          <span className="text-sm font-medium text-gray-700">Date</span>
+      <div className="mx-auto max-w-xl px-4 py-8">
+        <div className="mb-6 animate-rise">
+          <span className="label-stamp">Let your manager know</span>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            My Availability
+          </h1>
+        </div>
+
+        <div className="card mb-8 animate-rise p-5">
+          <label className="field-label">Pick a date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+            className="field"
           />
-        </label>
-        <button
-          onClick={() => setAvailability(date, false)}
-          disabled={saving || !date}
-          className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50"
-        >
-          Mark Unavailable
-        </button>
-        <button
-          onClick={() => setAvailability(date, true)}
-          disabled={saving || !date}
-          className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50"
-        >
-          Mark Available
-        </button>
-      </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setAvailability(date, true)}
+              disabled={saving || !date}
+              className="btn btn-primary"
+            >
+              Available
+            </button>
+            <button
+              onClick={() => setAvailability(date, false)}
+              disabled={saving || !date}
+              className="btn btn-danger"
+            >
+              Unavailable
+            </button>
+          </div>
+        </div>
 
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
-        {records.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No availability set</div>
-        ) : (
-          records.map((r) => (
-            <div key={r.id} className="flex items-center justify-between p-3">
-              <span className="text-sm text-gray-900">{r.date}</span>
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded ${
-                  r.available
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {r.available ? 'Available' : 'Unavailable'}
-              </span>
-            </div>
-          ))
-        )}
+        <h2 className="label-stamp mb-2">Your dates</h2>
+        <div className="card animate-rise divide-y divide-line">
+          {records.length === 0 ? (
+            <div className="p-6 text-center text-sm text-ink-faint">No availability set</div>
+          ) : (
+            records.map((r) => (
+              <div key={r.id} className="flex items-center justify-between p-4">
+                <span className="font-mono text-sm text-ink">{r.date}</span>
+                <span className={`chip ${r.available ? 'chip-filled' : 'chip-danger'}`}>
+                  {r.available ? 'Available' : 'Unavailable'}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

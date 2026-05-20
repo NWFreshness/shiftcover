@@ -1,7 +1,9 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveSession } from '@/lib/auth';
+import Brand from '@/components/Brand';
 
 export default function Login() {
   const [code, setCode] = useState('');
@@ -26,6 +28,10 @@ export default function Login() {
         return;
       }
       saveSession(data.token, data.isManager, data.employee?.id);
+      if (!data.isManager && data.needsOnboarding) {
+        router.push('/welcome');
+        return;
+      }
       router.push(data.isManager ? '/manager' : '/board');
     } catch {
       setError('Network error');
@@ -35,30 +41,68 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">ShiftCover</h2>
-        <p className="mt-2 text-center text-sm text-gray-600">Enter your invite code</p>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <input
-            type="text"
-            inputMode="numeric"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            maxLength={6}
-            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 text-center text-2xl tracking-widest"
-          />
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading || code.length !== 6}
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+    <main className="grid min-h-screen place-items-center px-4 py-10">
+      <div className="w-full max-w-sm animate-rise">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <Brand size={40} />
+          <p className="mt-3 max-w-[16rem] text-sm text-ink-soft">
+            Shift coverage that never lets you down.
+          </p>
+        </div>
+
+        <div className="card overflow-hidden">
+          {/* punch strip */}
+          <div className="flex items-center justify-between border-b border-line bg-surface-sunk px-5 py-2.5">
+            <span className="label-stamp">Time Card · Access</span>
+            <span className="flex gap-1.5" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={i} className="h-1.5 w-1.5 rounded-full bg-ink-faint/55" />
+              ))}
+            </span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5 p-6">
+            <div>
+              <label htmlFor="code" className="field-label text-center">
+                Enter your 6-digit invite code
+              </label>
+              <input
+                id="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                maxLength={6}
+                className="field text-center font-mono text-3xl font-medium tracking-[0.5em] tabular-nums"
+              />
+            </div>
+
+            {error && (
+              <p className="banner banner-error text-center" role="alert">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              className="btn btn-accent w-full"
+            >
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-5 text-center text-xs text-ink-faint">
+          Codes are issued by your manager. New owner?{' '}
+          <Link href="/signup" className="font-semibold text-pine underline-offset-4 hover:underline">
+            Create a business
+          </Link>
+          .
+        </p>
       </div>
-    </div>
+    </main>
   );
 }

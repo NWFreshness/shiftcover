@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import TopBar from '@/components/TopBar';
 import { apiFetch, getToken, getEmployeeId } from '@/lib/auth';
 
 interface Shift {
@@ -44,7 +45,8 @@ export default function SwapsPage() {
       const all: Shift[] = (await shiftsRes.json()).shifts || [];
       setMyShifts(all.filter((s) => s.assignedEmployeeId === me));
     }
-    if (empRes.ok) setEmployees(((await empRes.json()).employees || []).filter((e: Employee) => e.id !== me));
+    if (empRes.ok)
+      setEmployees(((await empRes.json()).employees || []).filter((e: Employee) => e.id !== me));
     if (swapRes.ok) setSwaps((await swapRes.json()).swaps || []);
   }, [me]);
 
@@ -79,95 +81,106 @@ export default function SwapsPage() {
   const outgoing = swaps.filter((s) => s.requester.id === me);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Shift Swaps</h1>
-        <Link href="/board" className="text-sm text-indigo-600 hover:underline">
+    <>
+      <TopBar>
+        <Link href="/board" className="btn btn-ghost btn-sm">
           ← Open Shifts
         </Link>
-      </div>
+      </TopBar>
 
-      <form onSubmit={request} className="bg-white rounded-lg shadow p-4 mb-6 space-y-3">
-        <h2 className="font-semibold text-gray-900">Request a swap</h2>
-        <select
-          value={shiftId}
-          onChange={(e) => setShiftId(e.target.value)}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2"
-        >
-          <option value="">Select one of your shifts…</option>
-          {myShifts.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.date} {s.startTime}-{s.endTime} ({s.role})
-            </option>
-          ))}
-        </select>
-        <select
-          value={targetId}
-          onChange={(e) => setTargetId(e.target.value)}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2"
-        >
-          <option value="">Swap with…</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={!shiftId || !targetId}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-50"
-        >
-          Send Request
-        </button>
-      </form>
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6 animate-rise">
+          <span className="label-stamp">Trade a shift</span>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            Shift Swaps
+          </h1>
+        </div>
 
-      <h2 className="font-semibold text-gray-900 mb-2">Incoming requests</h2>
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-100 mb-6">
-        {incoming.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">None</div>
-        ) : (
-          incoming.map((s) => (
-            <div key={s.id} className="p-3 flex items-center justify-between">
-              <span className="text-sm text-gray-900">
-                {s.requester.name} → you: {s.shift.date} {s.shift.startTime}-{s.shift.endTime}
-              </span>
-              <span className="flex gap-2">
-                <button
-                  onClick={() => act(s.id, 'accept')}
-                  className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => act(s.id, 'reject')}
-                  className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                >
-                  Reject
-                </button>
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+        <form onSubmit={request} className="card mb-8 animate-rise space-y-3 p-5">
+          <h2 className="font-display font-bold text-ink">Request a swap</h2>
+          <div>
+            <label className="field-label">Your shift</label>
+            <select value={shiftId} onChange={(e) => setShiftId(e.target.value)} className="field">
+              <option value="">Select one of your shifts…</option>
+              {myShifts.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.date} {s.startTime}-{s.endTime} ({s.role})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Swap with</label>
+            <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="field">
+              <option value="">Choose a coworker…</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" disabled={!shiftId || !targetId} className="btn btn-primary">
+            Send Request
+          </button>
+        </form>
 
-      <h2 className="font-semibold text-gray-900 mb-2">Your requests</h2>
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
-        {outgoing.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">None</div>
-        ) : (
-          outgoing.map((s) => (
-            <div key={s.id} className="p-3 flex items-center justify-between">
-              <span className="text-sm text-gray-900">
-                {s.shift.date} {s.shift.startTime}-{s.shift.endTime} → {s.targetEmployee.name}
-              </span>
-              <span className="text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">
-                {s.status}
-              </span>
-            </div>
-          ))
-        )}
+        <h2 className="label-stamp mb-2">Incoming requests</h2>
+        <div className="card mb-8 animate-rise divide-y divide-line">
+          {incoming.length === 0 ? (
+            <div className="p-5 text-center text-sm text-ink-faint">Nothing waiting on you</div>
+          ) : (
+            incoming.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 p-4">
+                <span className="text-sm text-ink">
+                  <span className="font-semibold">{s.requester.name}</span> → you
+                  <span className="block font-mono text-xs text-ink-soft">
+                    {s.shift.date} {s.shift.startTime}-{s.shift.endTime}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-2">
+                  <button onClick={() => act(s.id, 'accept')} className="btn btn-primary btn-sm">
+                    Accept
+                  </button>
+                  <button onClick={() => act(s.id, 'reject')} className="btn btn-ghost btn-sm">
+                    Reject
+                  </button>
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <h2 className="label-stamp mb-2">Your requests</h2>
+        <div className="card animate-rise divide-y divide-line">
+          {outgoing.length === 0 ? (
+            <div className="p-5 text-center text-sm text-ink-faint">No requests sent yet</div>
+          ) : (
+            outgoing.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 p-4">
+                <span className="text-sm text-ink">
+                  <span className="font-mono text-xs text-ink-soft">
+                    {s.shift.date} {s.shift.startTime}-{s.shift.endTime}
+                  </span>
+                  <span className="block">→ {s.targetEmployee.name}</span>
+                </span>
+                <span className={`chip ${statusChip(s.status)}`}>{s.status}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </>
+  );
+}
+
+function statusChip(status: string) {
+  return (
+    {
+      pending: 'chip-open',
+      accepted: 'chip-info',
+      approved: 'chip-filled',
+      rejected: 'chip-danger',
+    }[status] || 'chip-neutral'
   );
 }

@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
-  <rect width="192" height="192" rx="32" fill="#4f46e5"/>
-  <text x="96" y="120" font-size="80" font-family="Arial, sans-serif" font-weight="bold" fill="white" text-anchor="middle">SC</text>
+  <rect width="192" height="192" rx="40" fill="#f1ece1"/>
+  <g transform="translate(34 34) scale(3.875)">
+    <path d="M6 0H21L32 11V26C32 29.3137 29.3137 32 26 32H6C2.68629 32 0 29.3137 0 26V6C0 2.68629 2.68629 0 6 0Z" fill="#1f4d3c"/>
+    <path d="M21 0L32 11H24C22.3431 11 21 9.65685 21 8V0Z" fill="#163a2d"/>
+    <circle cx="15" cy="19" r="7.25" stroke="#f1ece1" stroke-width="1.6"/>
+    <path d="M15 19V14.6M15 19L18.2 20.6" stroke="#b9670f" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="15" cy="19" r="1" fill="#f1ece1"/>
+  </g>
 </svg>

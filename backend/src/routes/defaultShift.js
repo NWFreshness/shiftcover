@@ -1,0 +1,87 @@
+import { Router } from 'express';
+import prisma from '../lib/prisma.js';
+import { validate } from '../middleware/validate.js';
+import { requireManager } from '../middleware/auth.js';
+import { defaultShiftCreateSchema, defaultShiftUpdateSchema } from '../schemas.js';
+
+const router = Router();
+
+function sanitizeError(error) {
+  console.error('Server error:', error);
+  return 'Internal server error';
+}
+
+// GET /api/default-shifts — list all for the business (auth required)
+router.get('/', async (req, res) => {
+  try {
+    const shifts = await prisma.defaultShift.findMany({
+      where: { businessId: req.auth.businessId },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ defaultShifts: shifts.map(s => ({ ...s, daysOfWeek: JSON.parse(s.daysOfWeek) })) });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// POST /api/default-shifts — create (manager only)
+router.post('/', requireManager, validate(defaultShiftCreateSchema), async (req, res) => {
+  try {
+    const { label, role, startTime, endTime, site, daysOfWeek } = req.body;
+    const shift = await prisma.defaultShift.create({
+      data: {
+        businessId: req.auth.businessId,
+        label,
+        role,
+        startTime,
+        endTime,
+        site,
+        daysOfWeek: JSON.stringify(daysOfWeek || []),
+      },
+    });
+    res.status(201).json({ defaultShift: { ...shift, daysOfWeek: JSON.parse(shift.daysOfWeek) } });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// PUT /api/default-shifts/:id — update (manager only, ownership check)
+router.put('/:id', requireManager, validate(defaultShiftUpdateSchema), async (req, res) => {
+  try {
+    const existing = await prisma.defaultShift.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.businessId !== req.auth.businessId) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const { label, role, startTime, endTime, site, daysOfWeek } = req.body;
+    const updated = await prisma.defaultShift.update({
+      where: { id: req.params.id },
+      data: {
+        ...(label !== undefined && { label }),
+        ...(role !== undefined && { role }),
+        ...(startTime !== undefined && { startTime }),
+        ...(endTime !== undefined && { endTime }),
+        ...(site !== undefined && { site }),
+        ...(daysOfWeek !== undefined && { daysOfWeek: JSON.stringify(daysOfWeek) }),
+      },
+    });
+    res.json({ defaultShift: { ...updated, daysOfWeek: JSON.parse(updated.daysOfWeek) } });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// DELETE /api/default-shifts/:id — delete (manager only, ownership check)
+router.delete('/:id', requireManager, async (req, res) => {
+  try {
+    const existing = await prisma.defaultShift.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.businessId !== req.auth.businessId) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    await prisma.defaultShift.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+export default router;

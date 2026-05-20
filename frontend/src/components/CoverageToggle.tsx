@@ -13,10 +13,8 @@ export default function CoverageToggle() {
     setLoading(true);
     try {
       if (enabled) {
-        // Turning off - just update state
         setEnabled(false);
       } else {
-        // Turning on - trigger fill-all
         const res = await apiFetch('/api/coverage/fill-all', {
           method: 'POST',
           body: JSON.stringify({}),
@@ -32,28 +30,49 @@ export default function CoverageToggle() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
-      <div>
-        <h3 className="font-semibold text-gray-900">Auto Coverage</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          Automatically fill open shifts with available employees
-        </p>
-        {lastRun && (
-          <p className="text-xs text-gray-400 mt-1">Last run: {lastRun}</p>
-        )}
-        {result && (
-          <p className="text-sm text-green-600 mt-1">{result.message}</p>
-        )}
+    <div
+      className={`card flex items-center justify-between gap-4 p-4 transition-colors ${
+        enabled ? 'ring-1 ring-pine/40' : ''
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
+            enabled ? 'bg-pine text-surface' : 'bg-surface-sunk text-ink-soft'
+          }`}
+          aria-hidden="true"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeLinecap="round" opacity="0.5" />
+            <circle cx="12" cy="12" r="4.5" />
+          </svg>
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display font-bold text-ink">Auto Coverage</h3>
+            <span className={`chip ${enabled ? 'chip-filled' : 'chip-neutral'}`}>
+              {enabled ? 'On' : 'Off'}
+            </span>
+          </div>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            Automatically fill open shifts with available employees.
+          </p>
+          {lastRun && <p className="mt-1 font-mono text-xs text-ink-faint">Last run: {lastRun}</p>}
+          {result && <p className="mt-1 text-sm font-medium text-sage-ink">{result.message}</p>}
+        </div>
       </div>
       <button
         onClick={handleToggle}
         disabled={loading}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          enabled ? 'bg-indigo-600' : 'bg-gray-200'
+        role="switch"
+        aria-checked={enabled}
+        aria-label="Toggle auto coverage"
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors disabled:opacity-50 ${
+          enabled ? 'border-pine-deep bg-pine' : 'border-line-strong bg-surface-sunk'
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-5 w-5 transform rounded-full bg-surface shadow transition-transform ${
             enabled ? 'translate-x-6' : 'translate-x-1'
           }`}
         />

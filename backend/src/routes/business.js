@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 import { requireManager } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { businessUpdateSchema } from '../schemas.js';
+import { isSMSEnabled } from '../services/sms.js';
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get('/', async (req, res) => {
       where: { id: req.auth.businessId },
     });
     if (!business) return res.status(404).json({ error: 'Not found' });
-    res.json({ business });
+    res.json({ business, smsEnabled: isSMSEnabled() });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
