@@ -55,10 +55,12 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Frontend wiring (currently demo-only)
 
-- [ ] `manager/page.tsx` — "Add Shift" is a `console.log` TODO (`:28`), stats hardcoded (`12/10/2`), uses `DEMO_BUSINESS_ID = 'demo'`
-- [ ] `board/page.tsx` — fetches `/api/shifts/demo` and claims with `employeeId: 'demo-employee'`; neither is a UUID → backend 400
-- [ ] `login/page.tsx` — any 6-digit code routes to `/board`; no backend call
-- [ ] Replace demo IDs/handlers with real fetches + session state once auth lands
+- [x] `login/page.tsx` — calls `POST /api/auth/login`, stores the session, routes managers to `/manager` and employees to `/board`, shows errors
+- [x] Added `lib/auth.ts` — token storage + `apiFetch` wrapper that attaches the Bearer token
+- [x] `board/page.tsx` — uses `apiFetch('/api/shifts')`, claims with token identity (no `employeeId` in body), redirects to `/login` if unauthenticated
+- [x] `manager/page.tsx` — auth + manager gate, real stats from `/api/coverage/stats`, employees from `/api/employees`, "Add Shift" now POSTs to `/api/shifts`
+- [x] `ScheduleGrid` / `CoverageToggle` — updated to `apiFetch` + new token-scoped routes (dropped `businessId` props)
+- [ ] Add a logout control and handle 401s globally (e.g. redirect to `/login` on expired token)
 
 ---
 

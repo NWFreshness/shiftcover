@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import OpenShiftCard from '@/components/OpenShiftCard';
+import { apiFetch, getToken } from '@/lib/auth';
 
 interface Shift {
   id: string;
@@ -14,29 +16,31 @@ interface Shift {
   businessId: string;
 }
 
-const DEMO_BUSINESS_ID = 'demo';
-
 export default function EmployeeBoard() {
+  const router = useRouter();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    fetch(`/api/shifts/${DEMO_BUSINESS_ID}`)
+    if (!getToken()) {
+      router.replace('/login');
+      return;
+    }
+    apiFetch('/api/shifts')
       .then((res) => res.json())
       .then((data) => {
         const openShifts = (data.shifts || []).filter((s: Shift) => s.status === 'open');
         setShifts(openShifts);
       });
-  }, []);
+  }, [router]);
 
   const handleClaim = async (shiftId: string) => {
     setClaiming(shiftId);
     try {
-      const res = await fetch('/api/claims', {
+      const res = await apiFetch('/api/claims', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shiftId, employeeId: 'demo-employee' }),
+        body: JSON.stringify({ shiftId }),
       });
       if (res.ok) {
         setShifts(shifts.filter((s) => s.id !== shiftId));

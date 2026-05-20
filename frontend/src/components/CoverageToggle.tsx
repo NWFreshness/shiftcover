@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { apiFetch } from '@/lib/auth';
 
-interface CoverageToggleProps {
-  businessId: string;
-}
-
-export default function CoverageToggle({ businessId }: CoverageToggleProps) {
+export default function CoverageToggle() {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastRun, setLastRun] = useState<string | null>(null);
@@ -20,10 +17,9 @@ export default function CoverageToggle({ businessId }: CoverageToggleProps) {
         setEnabled(false);
       } else {
         // Turning on - trigger fill-all
-        const res = await fetch('/api/coverage/fill-all', {
+        const res = await apiFetch('/api/coverage/fill-all', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ businessId }),
+          body: JSON.stringify({}),
         });
         const data = await res.json();
         setResult({ filled: data.results?.length || 0, message: data.message });

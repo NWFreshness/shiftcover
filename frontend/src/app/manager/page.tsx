@@ -1,16 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import CoverageToggle from '@/components/CoverageToggle';
 import ShiftModal from '@/components/ShiftModal';
-
-const DEMO_BUSINESS_ID = 'demo';
-const DEMO_EMPLOYEES = [
-  { id: '1', name: 'Alice', role: 'Bartender' },
-  { id: '2', name: 'Bob', role: 'Server' },
-  { id: '3', name: 'Carol', role: 'Bartender' },
-];
+import { apiFetch, getToken, isManager } from '@/lib/auth';
 
 interface ShiftFormData {
   date: string;
@@ -21,12 +16,57 @@ interface ShiftFormData {
   assignedEmployeeId: string;
 }
 
-export default function ManagerDashboard() {
-  const [modalOpen, setModalOpen] = useState(false);
+interface Employee {
+  id: string;
+  name: string;
+  role: string;
+}
 
-  const handleAddShift = (data: ShiftFormData) => {
-    console.log('Add shift:', data);
-    // TODO: POST to /api/shifts
+interface Stats {
+  total: number;
+  filled: number;
+  open: number;
+}
+
+export default function ManagerDashboard() {
+  const router = useRouter();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [stats, setStats] = useState<Stats>({ total: 0, filled: 0, open: 0 });
+
+  const loadData = useCallback(async () => {
+    const [statsRes, empRes] = await Promise.all([
+      apiFetch('/api/coverage/stats'),
+      apiFetch('/api/employees'),
+    ]);
+    if (statsRes.ok) setStats(await statsRes.json());
+    if (empRes.ok) setEmployees((await empRes.json()).employees || []);
+  }, []);
+
+  useEffect(() => {
+    if (!getToken()) {
+      router.replace('/login');
+      return;
+    }
+    if (!isManager()) {
+      router.replace('/board');
+      return;
+    }
+    loadData();
+  }, [router, loadData]);
+
+  const handleAddShift = async (data: ShiftFormData) => {
+    const res = await apiFetch('/api/shifts', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...data,
+        assignedEmployeeId: data.assignedEmployeeId || undefined,
+      }),
+    });
+    if (res.ok) {
+      setModalOpen(false);
+      loadData();
+    }
   };
 
   return (
@@ -47,30 +87,30 @@ export default function ManagerDashboard() {
       {/* Coverage Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-gray-900">12</div>
+          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           <div className="text-sm text-gray-500">Total Shifts</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-green-600">10</div>
+          <div className="text-2xl font-bold text-green-600">{stats.filled}</div>
           <div className="text-sm text-gray-500">Filled</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-2xl font-bold text-amber-600">2</div>
+          <div className="text-2xl font-bold text-amber-600">{stats.open}</div>
           <div className="text-sm text-gray-500">Open</div>
         </div>
       </div>
 
-      <CoverageToggle businessId={DEMO_BUSINESS_ID} />
+      <CoverageToggle />
 
       <div className="mt-6">
-        <ScheduleGrid businessId={DEMO_BUSINESS_ID} />
+        <ScheduleGrid />
       </div>
 
       <ShiftModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleAddShift}
-        employees={DEMO_EMPLOYEES}
+        employees={employees}
       />
     </div>
   );

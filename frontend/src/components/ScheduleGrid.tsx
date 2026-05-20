@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/auth';
 
 interface Shift {
   id: string;
@@ -13,26 +14,22 @@ interface Shift {
   assignedEmployee?: { id: string; name: string };
 }
 
-interface ScheduleGridProps {
-  businessId: string;
-}
-
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 7am to 6pm
 
-export default function ScheduleGrid({ businessId }: ScheduleGridProps) {
+export default function ScheduleGrid() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/shifts/${businessId}`)
+    apiFetch('/api/shifts')
       .then((res) => res.json())
       .then((data) => {
         setShifts(data.shifts || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [businessId]);
+  }, []);
 
   // Get week starting from Sunday
   const today = new Date();
