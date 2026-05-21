@@ -116,3 +116,7 @@ export const employeeSelfUpdateSchema = z.object({
   phone: phone.optional(),
   email,
 });
+
+export const publishWeekSchema = z.object({
+  weekStart: dateStr.optional(),
+});

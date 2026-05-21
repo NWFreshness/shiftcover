@@ -9,6 +9,7 @@ import {
   defaultShiftCreateSchema,
   defaultShiftUpdateSchema,
   claimSchema,
+  publishWeekSchema,
 } from '../src/schemas.js';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
@@ -132,4 +133,20 @@ test('defaultShiftUpdateSchema: allows partial template updates', () => {
 test('claimSchema: requires a uuid shiftId', () => {
   assert.equal(claimSchema.safeParse({ shiftId: 'x' }).success, false);
   assert.equal(claimSchema.safeParse({ shiftId: UUID }).success, true);
+});
+
+test('publishWeekSchema: accepts empty body', () => {
+  const result = publishWeekSchema.safeParse({});
+  assert.equal(result.success, true);
+});
+
+test('publishWeekSchema: accepts a valid YYYY-MM-DD weekStart', () => {
+  const result = publishWeekSchema.safeParse({ weekStart: '2026-05-25' });
+  assert.equal(result.success, true);
+  assert.equal(result.data.weekStart, '2026-05-25');
+});
+
+test('publishWeekSchema: rejects a non-date string', () => {
+  const result = publishWeekSchema.safeParse({ weekStart: 'next-monday' });
+  assert.equal(result.success, false);
 });
