@@ -4,6 +4,7 @@ import { requireManager } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { shiftCreateSchema, shiftUpdateSchema, shiftAssignSchema } from '../schemas.js';
 import { uuidRegex, sanitizeError } from '../lib/utils.js';
+import { toDateStr } from '../services/scheduling.js';
 
 const router = Router();
 
@@ -45,6 +46,24 @@ router.post('/', requireManager, validate(shiftCreateSchema), async (req, res) =
       },
     });
     res.status(201).json({ shift });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// Get upcoming shifts for the authenticated employee
+router.get('/mine', async (req, res) => {
+  try {
+    const today = toDateStr(new Date());
+    const shifts = await prisma.shift.findMany({
+      where: {
+        assignedEmployeeId: req.auth.employeeId,
+        date: { gte: today },
+      },
+      include: { assignedEmployee: true },
+      orderBy: { date: 'asc' },
+    });
+    res.json({ shifts });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
