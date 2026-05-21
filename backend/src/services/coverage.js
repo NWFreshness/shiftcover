@@ -1,6 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { sendShiftNotification } from './sms.js';
-import { selectCandidate } from './scheduling.js';
+import { selectCandidate, toDateStr } from './scheduling.js';
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -100,18 +100,29 @@ export async function getCoverageStats(businessId) {
     throw new Error('Invalid business ID format');
   }
 
-  const totalShifts = await prisma.shift.count({ where: { businessId } });
-  const filledShifts = await prisma.shift.count({
-    where: { businessId, status: 'filled' },
-  });
-  const openShifts = await prisma.shift.count({
-    where: { businessId, status: 'open' },
-  });
+  const thresholdHours = Number(process.env.ALERT_THRESHOLD_HOURS) || 4;
+  const cutoff = new Date(Date.now() - thresholdHours * 60 * 60 * 1000);
+  const today = toDateStr(new Date());
+
+  const [totalShifts, filledShifts, openShifts, staleOpen] = await Promise.all([
+    prisma.shift.count({ where: { businessId } }),
+    prisma.shift.count({ where: { businessId, status: 'filled' } }),
+    prisma.shift.count({ where: { businessId, status: 'open' } }),
+    prisma.shift.count({
+      where: {
+        businessId,
+        status: 'open',
+        date: { gte: today },
+        createdAt: { lt: cutoff },
+      },
+    }),
+  ]);
 
   return {
     total: totalShifts,
     filled: filledShifts,
     open: openShifts,
+    staleOpen,
     coverageRate: totalShifts > 0 ? Math.round((filledShifts / totalShifts) * 100) : 0,
   };
 }
