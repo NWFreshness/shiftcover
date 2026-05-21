@@ -8,6 +8,7 @@ import {
   doubleShiftViolation,
   preferredForSite,
   selectCandidate,
+  nextMonday,
 } from '../src/services/scheduling.js';
 
 const emp = (id, quals = []) => ({ id, qualifications: JSON.stringify(quals) });
@@ -138,4 +139,24 @@ test('selectCandidate: load-balances toward the employee with fewer upcoming shi
   const existing = [shift('x', '2026-05-28', '09:00', '17:00', { assignedEmployeeId: 'e1' })];
   const chosen = selectCandidate(target, employees, existing, null);
   assert.equal(chosen.id, 'e2');
+});
+
+test('nextMonday: from a Monday returns the following Monday (7 days)', () => {
+  // 2026-05-18 is a Monday
+  assert.equal(nextMonday(new Date(2026, 4, 18)), '2026-05-25');
+});
+
+test('nextMonday: from a Wednesday returns the next Monday (5 days)', () => {
+  // 2026-05-20 is a Wednesday
+  assert.equal(nextMonday(new Date(2026, 4, 20)), '2026-05-25');
+});
+
+test('nextMonday: from a Sunday returns the very next day (Monday)', () => {
+  // 2026-05-24 is a Sunday
+  assert.equal(nextMonday(new Date(2026, 4, 24)), '2026-05-25');
+});
+
+test('nextMonday: from a Saturday returns 2 days later (Monday)', () => {
+  // 2026-05-23 is a Saturday
+  assert.equal(nextMonday(new Date(2026, 4, 23)), '2026-05-25');
 });

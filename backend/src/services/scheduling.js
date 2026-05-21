@@ -144,3 +144,9 @@ export function selectCandidate(shift, employees, allShifts, rules, unavailable 
 
   return candidates.length ? candidates[0].emp : null;
 }
+
+export function nextMonday(fromDate = new Date()) {
+  const dow = fromDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysUntilMonday = dow === 0 ? 1 : 8 - dow;
+  return addDays(toDateStr(fromDate), daysUntilMonday);
+}
