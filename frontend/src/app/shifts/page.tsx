@@ -31,7 +31,8 @@ export default function MyShiftsPage() {
       .then((data) => {
         setShifts(data.shifts || []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [router]);
 
   return (
@@ -63,7 +64,7 @@ export default function MyShiftsPage() {
           </p>
         </div>
 
-        {!loading && shifts.length === 0 ? (
+        {loading ? null : shifts.length === 0 ? (
           <div className="card flex flex-col items-center justify-center gap-3 py-16 text-center animate-rise">
             <p className="font-display text-lg font-bold text-ink">No upcoming shifts</p>
             <p className="max-w-xs text-sm text-ink-soft">
