@@ -2,14 +2,11 @@ import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { validate } from '../middleware/validate.js';
 import { requireManager } from '../middleware/auth.js';
-import { defaultShiftCreateSchema, defaultShiftUpdateSchema } from '../schemas.js';
+import { defaultShiftCreateSchema, defaultShiftUpdateSchema, publishWeekSchema } from '../schemas.js';
+import { sanitizeError } from '../lib/utils.js';
+import { addDays, nextMonday } from '../services/scheduling.js';
 
 const router = Router();
-
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
-}
 
 export function serializeDefaultShift(shift) {
   return { ...shift, daysOfWeek: JSON.parse(shift.daysOfWeek) };
@@ -23,6 +20,65 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
     res.json({ defaultShifts: shifts.map(serializeDefaultShift) });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+// POST /api/default-shifts/publish-week — materialize default shifts into concrete shifts (manager only)
+router.post('/publish-week', requireManager, validate(publishWeekSchema), async (req, res) => {
+  try {
+    const weekStart = req.body.weekStart || nextMonday();
+    const today = new Date().toISOString().split('T')[0];
+
+    const templates = await prisma.defaultShift.findMany({
+      where: { businessId: req.auth.businessId },
+    });
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const template of templates) {
+      const daysOfWeek = JSON.parse(template.daysOfWeek || '[]');
+      for (const dow of daysOfWeek) {
+        // Monday=1→offset 0, Tue=2→1, …, Sat=6→5, Sun=0→6
+        const offset = dow === 0 ? 6 : dow - 1;
+        const date = addDays(weekStart, offset);
+
+        if (date < today) {
+          skipped++;
+          continue;
+        }
+
+        const existing = await prisma.shift.findFirst({
+          where: {
+            businessId: req.auth.businessId,
+            date,
+            startTime: template.startTime,
+            role: template.role,
+          },
+        });
+
+        if (existing) {
+          skipped++;
+        } else {
+          await prisma.shift.create({
+            data: {
+              businessId: req.auth.businessId,
+              date,
+              startTime: template.startTime,
+              endTime: template.endTime,
+              role: template.role,
+              site: template.site,
+              status: 'open',
+            },
+          });
+          created++;
+        }
+      }
+    }
+
+    res.json({ created, skipped, weekStart });
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
