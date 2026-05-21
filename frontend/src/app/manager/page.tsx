@@ -28,14 +28,16 @@ interface Stats {
   total: number;
   filled: number;
   open: number;
+  staleOpen: number;
 }
 
 export default function ManagerDashboard() {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, filled: 0, open: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, filled: 0, open: 0, staleOpen: 0 });
   const [status, setStatus] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   const loadData = useCallback(async () => {
     const [statsRes, empRes] = await Promise.all([
@@ -85,6 +87,29 @@ export default function ManagerDashboard() {
     }
   };
 
+  const handlePublishWeek = async () => {
+    setPublishing(true);
+    try {
+      const res = await apiFetch('/api/default-shifts/publish-week', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const weekDate = new Date(data.weekStart + 'T00:00:00').toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+        });
+        setStatus(
+          data.created > 0
+            ? `Published ${data.created} shift${data.created === 1 ? '' : 's'} for the week of ${weekDate}`
+            : 'All shifts for next week already exist',
+        );
+        setTimeout(() => setStatus(null), 5000);
+        loadData();
+      }
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleAddShift = async (data: ShiftFormData) => {
     const res = await apiFetch('/api/shifts', {
       method: 'POST',
@@ -130,6 +155,9 @@ export default function ManagerDashboard() {
             <button onClick={handleCheckUncovered} className="btn btn-ghost btn-sm">
               Check Uncovered
             </button>
+            <button onClick={handlePublishWeek} disabled={publishing} className="btn btn-ghost btn-sm">
+              {publishing ? 'Publishing…' : 'Publish Week'}
+            </button>
             <button onClick={() => setModalOpen(true)} className="btn btn-primary btn-sm">
               <span className="text-base leading-none">+</span> Add Shift
             </button>
@@ -160,6 +188,17 @@ export default function ManagerDashboard() {
             />
           </div>
         </div>
+
+        {stats.staleOpen > 0 && (
+          <div className="banner banner-error mb-6 flex items-center justify-between animate-rise">
+            <span>
+              {stats.staleOpen} shift{stats.staleOpen === 1 ? '' : 's'} open for over 4h
+            </span>
+            <button onClick={handleCheckUncovered} className="btn btn-danger btn-sm ml-4 shrink-0">
+              Alert Managers
+            </button>
+          </div>
+        )}
 
         <div className="animate-rise" style={{ animationDelay: '0.22s' }}>
           <CoverageToggle />
