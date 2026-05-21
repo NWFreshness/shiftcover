@@ -103,7 +103,7 @@ export default function ManagerDashboard() {
             : 'All shifts for next week already exist',
         );
         setTimeout(() => setStatus(null), 5000);
-        loadData();
+        await loadData();
       }
     } finally {
       setPublishing(false);
