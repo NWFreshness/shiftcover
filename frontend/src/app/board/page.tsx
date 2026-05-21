@@ -62,6 +62,9 @@ export default function EmployeeBoard() {
   return (
     <>
       <TopBar>
+        <Link href="/shifts" className="btn btn-ghost btn-sm">
+          My Shifts
+        </Link>
         <Link href="/swaps" className="btn btn-ghost btn-sm">
           Swaps
         </Link>
