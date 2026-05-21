@@ -14,7 +14,7 @@ export function buildOnboardingSteps(business) {
     businessProfile: !!(business.name && business.industryType),
     defaultShifts: business.defaultShifts.length > 0,
     employees: business.employees.length > 0,
-    coverageRules: business.coverageRules.length > 0,
+    coverageRules: !!business.coverageRules,
   };
 }
 
@@ -24,7 +24,7 @@ router.get('/status', async (req, res) => {
     const business = await prisma.business.findUnique({
       where: { id: req.auth.businessId },
       include: {
-        employees: { where: { isManager: false } },
+        employees: { where: { isManager: false }, select: { id: true } },
         coverageRules: { select: { id: true } },
         defaultShifts: { select: { id: true } },
       },

@@ -11,8 +11,10 @@ const browser = await chromium.launch({ executablePath: '/home/tylermayfield/.ca
 const ctx = await browser.newContext();
 const page = await ctx.newPage();
 const errors = [];
+const failedRequests = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
+page.on('response', (r) => { if (r.status() >= 400) failedRequests.push(`${r.status()} ${r.url()}`); });
 
 async function shot(name) { await page.screenshot({ path: `/tmp/e2e-${name}.png`, fullPage: true }); }
 
@@ -20,26 +22,40 @@ try {
   // 1. Login page renders
   await page.goto(BASE, { waitUntil: 'networkidle' });
   log(page.url().includes('/login'), `root redirects to /login (url=${page.url()})`);
-  log(await page.getByText('Enter your invite code').isVisible(), 'login prompt visible');
+  log(await page.getByText('Enter your 6-digit invite code').isVisible(), 'login prompt visible');
 
-  // 2. Invalid code rejected
+  // 2. Invalid code rejected (intentional 401 — clear errors before continuing)
   await page.fill('input[inputMode="numeric"]', '000000');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(800);
   log(await page.getByText(/invalid code/i).isVisible().catch(() => false), 'invalid code shows error');
+  errors.length = 0; failedRequests.length = 0;
 
   // 3. Manager login
   await page.fill('input[inputMode="numeric"]', '');
   await page.fill('input[inputMode="numeric"]', MGR);
   await page.click('button[type="submit"]');
-  await page.waitForURL('**/manager', { timeout: 8000 });
-  log(true, 'manager login navigates to /manager');
-  await page.waitForTimeout(800);
+  // wait for any /manager or /manager/onboarding URL, then wait for async redirect to settle
+  await page.waitForURL(/\/manager/, { timeout: 8000 });
+  await page.waitForTimeout(1500);
+  // complete onboarding via API if the page redirected us there
+  if (page.url().includes('/onboarding')) {
+    await page.evaluate(async () => {
+      const token = localStorage.getItem('shiftcover_token');
+      await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    });
+    await page.goto(BASE + '/manager', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1000);
+  }
+  log(page.url().includes('/manager') && !page.url().includes('/onboarding'), 'manager login navigates to /manager');
   await shot('manager-dashboard');
 
   // capture starting stats
   const readStat = async (label) => {
-    const el = page.locator('div.bg-white', { hasText: label }).first();
+    const el = page.locator('.card', { hasText: label }).first();
     const txt = await el.innerText();
     return parseInt(txt.match(/\d+/)?.[0] ?? '0', 10);
   };
@@ -66,7 +82,7 @@ try {
   // 5. Check Uncovered button
   await page.getByRole('button', { name: 'Check Uncovered' }).click();
   await page.waitForTimeout(800);
-  const banner = await page.locator('div.bg-blue-50').innerText().catch(() => '');
+  const banner = await page.locator('.banner-info').innerText().catch(() => '');
   log(banner.length > 0, `check-uncovered shows status: "${banner.trim()}"`);
 
   // 6. Settings page loads
@@ -81,8 +97,19 @@ try {
   await page.goto(BASE + '/login', { waitUntil: 'networkidle' });
   await page.fill('input[inputMode="numeric"]', EMP);
   await page.click('button[type="submit"]');
-  await page.waitForURL('**/board', { timeout: 8000 });
-  log(true, 'employee login navigates to /board');
+  await page.waitForURL(/\/(board|welcome)/, { timeout: 8000 });
+  // new employees land on /welcome (onboarding); mark as onboarded and continue
+  if (page.url().includes('/welcome')) {
+    await page.evaluate(async () => {
+      const token = localStorage.getItem('shiftcover_token');
+      await fetch('/api/employees/me/onboarded', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    });
+    await page.goto(BASE + '/board', { waitUntil: 'networkidle' });
+  }
+  log(page.url().includes('/board'), 'employee login navigates to /board');
   await page.waitForTimeout(800);
   log(await page.getByRole('heading', { name: 'Open Shifts' }).isVisible(), 'open shifts board visible');
   await shot('employee-board');
@@ -101,6 +128,7 @@ try {
 
   log(errors.length === 0, `no console/page errors (count=${errors.length})`);
   if (errors.length) console.log('ERRORS:', errors.slice(0, 5));
+  if (failedRequests.length) console.log('FAILED REQUESTS:', failedRequests);
 } catch (e) {
   log(false, `exception: ${e.message}`);
   await shot('failure');
