@@ -160,3 +160,8 @@ test('nextMonday: from a Saturday returns 2 days later (Monday)', () => {
   // 2026-05-23 is a Saturday
   assert.equal(nextMonday(new Date(2026, 4, 23)), '2026-05-25');
 });
+
+test('nextMonday: from a Friday returns 3 days later (Monday)', () => {
+  // 2026-05-22 is a Friday
+  assert.equal(nextMonday(new Date(2026, 4, 22)), '2026-05-25');
+});
