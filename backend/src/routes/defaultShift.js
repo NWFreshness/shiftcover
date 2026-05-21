@@ -4,7 +4,7 @@ import { validate } from '../middleware/validate.js';
 import { requireManager } from '../middleware/auth.js';
 import { defaultShiftCreateSchema, defaultShiftUpdateSchema, publishWeekSchema } from '../schemas.js';
 import { sanitizeError } from '../lib/utils.js';
-import { addDays, nextMonday } from '../services/scheduling.js';
+import { addDays, nextMonday, toDateStr } from '../services/scheduling.js';
 
 const router = Router();
 
@@ -28,8 +28,8 @@ router.get('/', async (req, res) => {
 // POST /api/default-shifts/publish-week — materialize default shifts into concrete shifts (manager only)
 router.post('/publish-week', requireManager, validate(publishWeekSchema), async (req, res) => {
   try {
-    const weekStart = req.body.weekStart || nextMonday();
-    const today = new Date().toISOString().split('T')[0];
+    const weekStart = req.body.weekStart ?? nextMonday();
+    const today = toDateStr(new Date());
 
     const templates = await prisma.defaultShift.findMany({
       where: { businessId: req.auth.businessId },
