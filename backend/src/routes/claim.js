@@ -2,15 +2,9 @@ import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { validate } from '../middleware/validate.js';
 import { claimSchema } from '../schemas.js';
+import { uuidRegex, sanitizeError } from '../lib/utils.js';
 
 const router = Router();
-
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
-}
 
 // Authenticated employee claims an open shift
 router.post('/', validate(claimSchema), async (req, res) => {

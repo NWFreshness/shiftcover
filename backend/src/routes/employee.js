@@ -5,13 +5,9 @@ import { validate } from '../middleware/validate.js';
 import { employeeCreateSchema, employeeUpdateSchema, employeeSelfUpdateSchema } from '../schemas.js';
 import { generateInviteCode } from '../utils/codeGen.js';
 import { sendSms, isSMSEnabled } from '../services/sms.js';
+import { sanitizeError } from '../lib/utils.js';
 
 const router = Router();
-
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
-}
 
 async function uniqueInviteCode() {
   for (let i = 0; i < 10; i++) {
@@ -123,14 +119,11 @@ router.put('/:id', requireManager, validate(employeeUpdateSchema), async (req, r
     if (!existing || existing.businessId !== req.auth.businessId) {
       return res.status(404).json({ error: 'Not found' });
     }
-    const { name, phone, email, role, qualifications, status } = req.body;
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (phone) updateData.phone = phone;
-    if (email !== undefined) updateData.email = email;
-    if (role) updateData.role = role;
-    if (qualifications) updateData.qualifications = JSON.stringify(qualifications);
-    if (status) updateData.status = status;
+    const { qualifications, ...rest } = req.body;
+    const updateData = Object.fromEntries(
+      Object.entries(rest).filter(([, v]) => v !== undefined)
+    );
+    if (qualifications !== undefined) updateData.qualifications = JSON.stringify(qualifications);
 
     const employee = await prisma.employee.update({
       where: { id: req.params.id },

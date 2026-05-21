@@ -5,6 +5,7 @@ import { notifyUncoveredShifts } from '../services/alerts.js';
 import { requireManager } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { coverageRuleSchema } from '../schemas.js';
+import { sanitizeError } from '../lib/utils.js';
 
 const router = Router();
 
@@ -14,11 +15,6 @@ const RULE_DEFAULTS = {
   maxHoursPerWeek: 40,
   preferredWorkerMap: {},
 };
-
-function sanitizeError(res, error) {
-  console.error('Server error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-}
 
 function serializeRules(rule) {
   if (!rule) return RULE_DEFAULTS;
@@ -44,7 +40,7 @@ router.get('/rules', requireManager, async (req, res) => {
     });
     res.json({ rules: serializeRules(rule) });
   } catch (error) {
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -67,7 +63,7 @@ router.put('/rules', requireManager, validate(coverageRuleSchema), async (req, r
     });
     res.json({ rules: serializeRules(rule) });
   } catch (error) {
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -85,7 +81,7 @@ router.post('/auto/:shiftId', requireManager, async (req, res) => {
     if (error.message === 'Shift already filled') {
       return res.status(409).json({ error: error.message });
     }
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -94,7 +90,7 @@ router.post('/fill-all', requireManager, async (req, res) => {
     const results = await fillAllOpenShifts(req.auth.businessId);
     res.json({ message: `Filled ${results.length} shifts`, results });
   } catch (error) {
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -109,7 +105,7 @@ router.get('/preview/:shiftId', requireManager, async (req, res) => {
     if (error.message === 'Shift not found') {
       return res.status(404).json({ error: error.message });
     }
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -123,7 +119,7 @@ router.post('/check-uncovered', requireManager, async (req, res) => {
     });
     res.json(summary);
   } catch (error) {
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 
@@ -132,7 +128,7 @@ router.get('/stats', async (req, res) => {
     const stats = await getCoverageStats(req.auth.businessId);
     res.json(stats);
   } catch (error) {
-    sanitizeError(res, error);
+    res.status(500).json({ error: sanitizeError(error) });
   }
 });
 

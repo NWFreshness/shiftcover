@@ -3,14 +3,23 @@ import prisma from '../lib/prisma.js';
 import { validate } from '../middleware/validate.js';
 import { swapCreateSchema } from '../schemas.js';
 import { requireManager } from '../middleware/auth.js';
+import { uuidRegex, sanitizeError } from '../lib/utils.js';
 
 const router = Router();
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_PREDECESSORS = {
+  accepted: ['pending'],
+  rejected: ['pending', 'accepted'],
+  approved: ['accepted'],
+};
 
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
+function assertTransition(swap, nextStatus) {
+  const allowed = ALLOWED_PREDECESSORS[nextStatus];
+  if (!allowed.includes(swap.status)) {
+    const err = new Error(`Swap must be in [${allowed.join(', ')}] to be ${nextStatus}`);
+    err.status = 409;
+    throw err;
+  }
 }
 
 const swapInclude = {
@@ -89,9 +98,7 @@ router.put('/:id/accept', async (req, res) => {
     if (swap.targetEmployeeId !== req.auth.employeeId) {
       return res.status(403).json({ error: 'Only the target employee can accept' });
     }
-    if (swap.status !== 'pending') {
-      return res.status(409).json({ error: `Swap is already ${swap.status}` });
-    }
+    assertTransition(swap, 'accepted');
     const updated = await prisma.swapRequest.update({
       where: { id: swap.id },
       data: { status: 'accepted' },
@@ -99,6 +106,7 @@ router.put('/:id/accept', async (req, res) => {
     });
     res.json({ swap: updated });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
@@ -112,9 +120,7 @@ router.put('/:id/reject', async (req, res) => {
     if (!isTarget && !req.auth.isManager) {
       return res.status(403).json({ error: 'Not allowed' });
     }
-    if (swap.status === 'approved' || swap.status === 'rejected') {
-      return res.status(409).json({ error: `Swap is already ${swap.status}` });
-    }
+    assertTransition(swap, 'rejected');
     const updated = await prisma.swapRequest.update({
       where: { id: swap.id },
       data: { status: 'rejected' },
@@ -122,6 +128,7 @@ router.put('/:id/reject', async (req, res) => {
     });
     res.json({ swap: updated });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     res.status(500).json({ error: sanitizeError(error) });
   }
 });
@@ -131,9 +138,7 @@ router.put('/:id/approve', requireManager, async (req, res) => {
   try {
     const swap = await ownedSwap(req.params.id, req.auth.businessId);
     if (!swap) return res.status(404).json({ error: 'Not found' });
-    if (swap.status !== 'accepted') {
-      return res.status(409).json({ error: 'Swap must be accepted by the target first' });
-    }
+    assertTransition(swap, 'approved');
     const result = await prisma.$transaction(async (tx) => {
       await tx.shift.update({
         where: { id: swap.shiftId },
@@ -147,6 +152,7 @@ router.put('/:id/approve', requireManager, async (req, res) => {
     });
     res.json({ swap: result });
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     res.status(500).json({ error: sanitizeError(error) });
   }
 });

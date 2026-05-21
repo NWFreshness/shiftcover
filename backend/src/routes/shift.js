@@ -3,15 +3,9 @@ import prisma from '../lib/prisma.js';
 import { requireManager } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { shiftCreateSchema, shiftUpdateSchema, shiftAssignSchema } from '../schemas.js';
+import { uuidRegex, sanitizeError } from '../lib/utils.js';
 
 const router = Router();
-
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function sanitizeError(error) {
-  console.error('Server error:', error);
-  return 'Internal server error';
-}
 
 async function ownedShift(id, businessId) {
   if (!uuidRegex.test(id)) return null;
@@ -98,18 +92,13 @@ router.put('/:id', requireManager, validate(shiftUpdateSchema), async (req, res)
     if (!(await ownedShift(req.params.id, req.auth.businessId))) {
       return res.status(404).json({ error: 'Not found' });
     }
-    const { date, startTime, endTime, site, role, assignedEmployeeId, status } = req.body;
-    const updateData = {};
-    if (date) updateData.date = date;
-    if (startTime) updateData.startTime = startTime;
-    if (endTime) updateData.endTime = endTime;
-    if (site !== undefined) updateData.site = site;
-    if (role) updateData.role = role;
-    if (assignedEmployeeId !== undefined) {
-      updateData.assignedEmployeeId = assignedEmployeeId;
+    const { assignedEmployeeId } = req.body;
+    const updateData = Object.fromEntries(
+      Object.entries(req.body).filter(([, v]) => v !== undefined)
+    );
+    if ('assignedEmployeeId' in updateData) {
       updateData.status = assignedEmployeeId ? 'filled' : 'open';
     }
-    if (status) updateData.status = status;
 
     const shift = await prisma.shift.update({
       where: { id: req.params.id },

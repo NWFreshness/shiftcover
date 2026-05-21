@@ -13,43 +13,13 @@ function sanitizeError(error) {
 }
 
 export async function sendShiftNotification(phone, shiftDetails) {
-  if (!client) {
-    console.log('SMS disabled: Twilio not configured');
-    return { success: false, reason: 'SMS disabled' };
-  }
-
   const message = `ShiftCover: You have been assigned a shift on ${shiftDetails.date} from ${shiftDetails.startTime} to ${shiftDetails.endTime} at ${shiftDetails.site || shiftDetails.role}. Reply YES to confirm.`;
-
-  try {
-    const result = await client.messages.create({
-      body: message,
-      from: fromNumber,
-      to: phone,
-    });
-    return { success: true, sid: result.sid };
-  } catch (error) {
-    throw new Error(sanitizeError(error));
-  }
+  return sendSms(phone, message);
 }
 
 export async function sendOpenShiftAlert(phone, shiftDetails) {
-  if (!client) {
-    console.log('SMS disabled: Twilio not configured');
-    return { success: false, reason: 'SMS disabled' };
-  }
-
   const message = `ShiftCover: An open shift needs coverage! ${shiftDetails.date} ${shiftDetails.startTime}-${shiftDetails.endTime} at ${shiftDetails.site || shiftDetails.role}. Open the app to claim it.`;
-
-  try {
-    const result = await client.messages.create({
-      body: message,
-      from: fromNumber,
-      to: phone,
-    });
-    return { success: true, sid: result.sid };
-  } catch (error) {
-    throw new Error(sanitizeError(error));
-  }
+  return sendSms(phone, message);
 }
 
 export async function sendSms(phone, message) {
